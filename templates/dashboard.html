@@ -1,0 +1,536 @@
+{% extends "base.html" %}
+
+{% block title %}
+Dashboard | Empower Hope
+{% endblock %}
+
+
+{% block nav_links %}
+
+<a
+  href="/dashboard"
+  class="nav-link active"
+>
+  Dashboard
+</a>
+
+<a
+  href="/admin"
+  id="admin-link"
+  class="nav-link"
+  style="display:none;"
+>
+  Admin
+</a>
+
+{% endblock %}
+
+
+{% block nav_user %}
+
+<span
+  id="welcome"
+  class="nav-welcome"
+></span>
+
+<button
+  id="logout-btn"
+  class="btn small logout"
+  type="button"
+>
+  Log Out
+</button>
+
+{% endblock %}
+
+
+{% block tabbar_items %}
+
+<a
+  href="/dashboard"
+  class="tab-item active"
+>
+  <span>Dashboard</span>
+</a>
+
+<a
+  href="/admin"
+  id="tab-admin"
+  class="tab-item"
+  style="display:none;"
+>
+  <span>Admin</span>
+</a>
+
+{% endblock %}
+
+
+{% block content %}
+
+<div class="grid">
+
+
+  <!-- ================================================================ -->
+  <!-- SIGN IN / OUT -->
+  <!-- ================================================================ -->
+
+  <section class="card accent-top">
+
+    <h2>
+      Sign In / Sign Out
+    </h2>
+
+    <p class="hint">
+      Record your daily arrival and departure.
+    </p>
+
+
+    <label>
+      Class
+
+      <select id="signclass-select">
+        <option value="">
+          Loading classes...
+        </option>
+      </select>
+
+    </label>
+
+
+    <div class="button-row signinout-row">
+
+      <button
+        id="signin-btn"
+        class="btn signin"
+        type="button"
+      >
+        Sign In
+      </button>
+
+      <button
+        id="signout-btn"
+        class="btn signout"
+        type="button"
+      >
+        Sign Out
+      </button>
+
+    </div>
+
+
+    <p
+      id="sign-message"
+      class="message"
+      role="alert"
+      aria-live="polite"
+    ></p>
+
+  </section>
+
+
+
+  <!-- ================================================================ -->
+  <!-- CHANGE PASSWORD -->
+  <!-- ================================================================ -->
+
+  <section class="card">
+
+    <h2>
+      Change Password
+    </h2>
+
+    <form id="change-password-form">
+
+      <label>
+        Current password
+
+        <input
+          type="password"
+          name="current_password"
+          required
+          autocomplete="current-password"
+        >
+
+      </label>
+
+
+      <label>
+        New password
+        (minimum 8 characters)
+
+        <input
+          type="password"
+          name="new_password"
+          required
+          minlength="8"
+          autocomplete="new-password"
+        >
+
+      </label>
+
+
+      <button
+        type="submit"
+        class="btn primary"
+      >
+        Update Password
+      </button>
+
+    </form>
+
+
+    <p
+      id="password-message"
+      class="message"
+      role="alert"
+    ></p>
+
+  </section>
+
+
+
+  <!-- ================================================================ -->
+  <!-- STUDENTS -->
+  <!-- ================================================================ -->
+
+  <section
+    class="card wide staff-only"
+    style="display:none;"
+  >
+
+    <h2>
+      Students &amp; Attendance
+    </h2>
+
+
+    <div class="filter-row">
+
+      <label>
+        Filter by class
+
+        <select id="class-filter"></select>
+
+      </label>
+
+
+      <label>
+        Date
+
+        <input
+          type="date"
+          id="attendance-date"
+        >
+
+      </label>
+
+    </div>
+
+
+    <div class="table-wrapper">
+
+      <table
+        class="data-table"
+        id="students-table"
+      >
+
+        <thead>
+
+          <tr>
+            <th>Name</th>
+            <th>Student #</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+
+        </thead>
+
+        <tbody></tbody>
+
+      </table>
+
+    </div>
+
+
+    <p
+      id="attendance-message"
+      class="message"
+      role="alert"
+    ></p>
+
+  </section>
+
+
+
+  <!-- ================================================================ -->
+  <!-- REPORTS -->
+  <!-- ================================================================ -->
+
+  <section
+    class="card wide staff-only"
+    style="display:none;"
+  >
+
+    <h2>
+      Attendance Reports
+    </h2>
+
+
+    <div class="tabs">
+
+      <button
+        class="tab-btn active"
+        data-report-tab="daily"
+        type="button"
+      >
+        Daily
+      </button>
+
+      <button
+        class="tab-btn"
+        data-report-tab="monthly"
+        type="button"
+      >
+        Monthly
+      </button>
+
+    </div>
+
+
+
+    <!-- DAILY REPORT -->
+
+    <div
+      id="daily-report-tab"
+      class="tab-panel active"
+    >
+
+      <div class="filter-row">
+
+        <label>
+          Class
+
+          <select id="report-daily-class"></select>
+
+        </label>
+
+
+        <label>
+          Date
+
+          <input
+            type="date"
+            id="report-daily-date"
+          >
+
+        </label>
+
+      </div>
+
+
+      <div class="button-row">
+
+        <button
+          id="report-daily-run"
+          class="btn primary"
+          type="button"
+        >
+          Run Report
+        </button>
+
+        <a
+          id="report-daily-xlsx"
+          class="btn"
+          href="#"
+        >
+          Export Excel
+        </a>
+
+        <a
+          id="report-daily-csv"
+          class="btn"
+          href="#"
+        >
+          Export CSV
+        </a>
+
+      </div>
+
+
+      <p
+        id="report-daily-summary"
+        class="report-summary"
+      ></p>
+
+
+      <div class="table-wrapper">
+
+        <table
+          class="data-table"
+          id="report-daily-table"
+        >
+
+          <thead>
+
+            <tr>
+              <th>Class</th>
+              <th>Student</th>
+              <th>Student #</th>
+              <th>Status</th>
+            </tr>
+
+          </thead>
+
+          <tbody></tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+
+
+    <!-- MONTHLY REPORT -->
+
+    <div
+      id="monthly-report-tab"
+      class="tab-panel"
+    >
+
+      <div class="filter-row">
+
+        <label>
+          Class
+
+          <select id="report-monthly-class"></select>
+
+        </label>
+
+
+        <label>
+          Month
+
+          <input
+            type="month"
+            id="report-monthly-month"
+          >
+
+        </label>
+
+      </div>
+
+
+      <div class="button-row">
+
+        <button
+          id="report-monthly-run"
+          class="btn primary"
+          type="button"
+        >
+          Run Report
+        </button>
+
+        <a
+          id="report-monthly-xlsx"
+          class="btn"
+          href="#"
+        >
+          Export Excel
+        </a>
+
+        <a
+          id="report-monthly-csv"
+          class="btn"
+          href="#"
+        >
+          Export CSV
+        </a>
+
+      </div>
+
+
+      <div class="table-wrapper">
+
+        <table
+          class="data-table"
+          id="report-monthly-table"
+        >
+
+          <thead>
+
+            <tr>
+              <th>Class</th>
+              <th>Student</th>
+              <th>Present</th>
+              <th>Absent</th>
+              <th>Marked</th>
+              <th>Attendance %</th>
+            </tr>
+
+          </thead>
+
+          <tbody></tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+  </section>
+
+</div>
+
+{% endblock %}
+
+
+{% block fab %}
+
+<div class="fab-wrap">
+
+  <div
+    class="fab-menu"
+    id="fab-menu"
+  >
+
+    <button
+      id="fab-signin"
+      class="fab-mini"
+      type="button"
+    >
+      Sign In
+    </button>
+
+    <button
+      id="fab-signout"
+      class="fab-mini"
+      type="button"
+    >
+      Sign Out
+    </button>
+
+  </div>
+
+
+  <button
+    id="fab-main"
+    class="fab"
+    type="button"
+    aria-label="Quick sign in or out"
+    aria-expanded="false"
+  >
+    +
+  </button>
+
+</div>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+
+<script
+  src="{{ url_for('static', filename='dashboard.js') }}"
+></script>
+
+{% endblock %}

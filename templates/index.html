@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta
+    name="description"
+    content="Empower Hope Online Roll and Attendance System"
+  >
+
+  <title>
+    Empower Hope | Roll & Attendance
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='style.css') }}"
+  >
+
+</head>
+
+<body>
+
+<div class="page">
+
+  <header class="brand">
+
+    <h1>
+      Empower Hope
+    </h1>
+
+    <p>
+      Online Roll &amp; Attendance System
+    </p>
+
+  </header>
+
+
+  <main class="card auth-card">
+
+    <div class="tabs">
+
+      <button
+        class="tab-btn active"
+        data-tab="login"
+        type="button"
+      >
+        Log In
+      </button>
+
+      <button
+        class="tab-btn"
+        data-tab="register"
+        type="button"
+      >
+        Register
+      </button>
+
+    </div>
+
+
+    <!-- LOGIN -->
+
+    <section
+      id="login-tab"
+      class="tab-panel active"
+    >
+
+      <form id="login-form">
+
+        <label>
+          Username
+
+          <input
+            type="text"
+            name="username"
+            required
+            minlength="3"
+            maxlength="50"
+            autocomplete="username"
+          >
+
+        </label>
+
+
+        <label>
+          Password
+
+          <input
+            type="password"
+            name="password"
+            required
+            autocomplete="current-password"
+          >
+
+        </label>
+
+
+        <button
+          type="submit"
+          class="btn primary"
+        >
+          Log In
+        </button>
+
+      </form>
+
+    </section>
+
+
+    <!-- REGISTRATION -->
+
+    <section
+      id="register-tab"
+      class="tab-panel"
+    >
+
+      <p class="hint">
+
+        Self-registration is for
+        <strong>Students</strong>
+        and
+        <strong>Other</strong>
+        visitors only.
+
+        New accounts require administrator
+        approval before login.
+
+        Staff accounts are created by an administrator.
+
+      </p>
+
+
+      <form id="register-form">
+
+        <label>
+          Full name
+
+          <input
+            type="text"
+            name="full_name"
+            required
+            minlength="2"
+            maxlength="100"
+          >
+
+        </label>
+
+
+        <label>
+          Username
+
+          <input
+            type="text"
+            name="username"
+            required
+            minlength="3"
+            maxlength="50"
+            autocomplete="username"
+          >
+
+        </label>
+
+
+        <label>
+          Password
+          (minimum 8 characters)
+
+          <input
+            type="password"
+            name="password"
+            required
+            minlength="8"
+            autocomplete="new-password"
+          >
+
+        </label>
+
+
+        <label>
+          I am a
+
+          <select name="user_type" id="user-type">
+
+            <option value="Student">
+              Student
+            </option>
+
+            <option value="Other">
+              Other
+            </option>
+
+          </select>
+
+        </label>
+
+
+        <label id="student-number-label">
+
+          Student number
+          (optional)
+
+          <input
+            type="text"
+            name="student_number"
+            maxlength="50"
+          >
+
+        </label>
+
+
+        <label id="registration-class-label">
+
+          Class
+
+          <select
+            name="class_id"
+            id="class-select"
+            required
+          >
+
+            <option value="">
+              Loading classes...
+            </option>
+
+          </select>
+
+        </label>
+
+
+        <button
+          type="submit"
+          class="btn primary"
+        >
+          Submit Registration
+        </button>
+
+      </form>
+
+    </section>
+
+
+    <p
+      id="message"
+      class="message"
+      role="alert"
+      aria-live="polite"
+    ></p>
+
+  </main>
+
+</div>
+
+
+<script
+  src="{{ url_for('static', filename='app.js') }}"
+></script>
+
+</body>
+</html>

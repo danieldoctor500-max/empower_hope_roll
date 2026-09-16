@@ -61,19 +61,33 @@ ROLES = [
 ATTENDANCE_STATUSES = [
     "Present",
     "Absent",
+    "Late",
+    "Excused",
 ]
 
 app = Flask(__name__)
 
-app.config["SECRET_KEY"] = os.environ.get(
-    "SECRET_KEY",
-    os.urandom(32).hex()
-)
+ENVIRONMENT = os.environ.get(
+    "FLASK_ENV",
+    "development"
+).lower()
+
+SECRET_KEY = os.environ.get("SECRET_KEY")
+
+if not SECRET_KEY:
+    if ENVIRONMENT == "production":
+        raise RuntimeError(
+            "SECRET_KEY must be set in production"
+        )
+
+    SECRET_KEY = "development-only-change-this-key"
+
+app.config["SECRET_KEY"] = SECRET_KEY
 
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
-if os.environ.get("FLASK_ENV") == "production":
+if ENVIRONMENT == "production":
     app.config["SESSION_COOKIE_SECURE"] = True
 
 
@@ -82,10 +96,15 @@ ADMIN_USERNAME = os.environ.get(
     "admin"
 )
 
-ADMIN_PASSWORD = os.environ.get(
-    "ADMIN_PASSWORD",
-    "ChangeMe123!"
-)
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+
+if not ADMIN_PASSWORD:
+    if ENVIRONMENT == "production":
+        raise RuntimeError(
+            "ADMIN_PASSWORD must be set in production"
+        )
+
+    ADMIN_PASSWORD = "ChangeMe123!"
 
 
 # ============================================================================
@@ -415,7 +434,7 @@ def dashboard_page():
 
 @app.route("/admin")
 def admin_page():
-    return render_template("admin.html")
+    return render_template("admin_dashboard.html")
 
 
 # ============================================================================
@@ -782,6 +801,22 @@ def api_signin():
             "error": "Please select a class"
         }), 400
 
+    if user["role"] == "student":
+
+        if not user["class_id"]:
+
+            return jsonify({
+                "error": "Your account is not assigned to a class"
+            }), 400
+
+        if str(user["class_id"]) != str(class_id):
+
+            return jsonify({
+                "error": (
+                    "You can only sign in for your assigned class"
+                )
+            }), 403
+
     if not class_exists(class_id):
 
         return jsonify({
@@ -1016,7 +1051,7 @@ def api_mark_attendance():
 
         return jsonify({
             "error": (
-                "Status must be Present or Absent"
+                "Status must be Present, Absent, Late, or Excused"
             )
         }), 400
 
@@ -2306,5 +2341,8 @@ if __name__ == "__main__":
     app.run(
         host="127.0.0.1",
         port=5000,
-        debug=True
+        debug=(
+            ENVIRONMENT != "production"
+            and os.environ.get("FLASK_DEBUG") == "1"
+        )
     )

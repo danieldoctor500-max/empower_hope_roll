@@ -214,6 +214,19 @@ Dashboard | Empower Hope
 
 
       <label>
+        Search students
+
+        <input
+          type="search"
+          id="student-search"
+          placeholder="Name or student number"
+          autocomplete="off"
+        >
+
+      </label>
+
+
+      <label>
         Date
 
         <input
@@ -222,6 +235,26 @@ Dashboard | Empower Hope
         >
 
       </label>
+
+      <label>
+        Bulk status
+
+        <select id="bulk-attendance-status">
+          <option value="">Choose status...</option>
+          <option value="Present">Present</option>
+          <option value="Absent">Absent</option>
+          <option value="Late">Late</option>
+          <option value="Excused">Excused</option>
+        </select>
+      </label>
+
+      <button
+        id="bulk-attendance-btn"
+        class="btn primary"
+        type="button"
+      >
+        Mark filtered students
+      </button>
 
     </div>
 

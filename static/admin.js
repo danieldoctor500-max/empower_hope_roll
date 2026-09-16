@@ -146,6 +146,54 @@ async function requireAdmin() {
 // PENDING USERS
 // ============================================================================
 
+let pendingUserIds = new Set();
+let pendingBaselineReady = false;
+
+
+function notifyNewPendingUsers(users) {
+
+    const newUsers =
+        users.filter(
+            (user) => !pendingUserIds.has(user.id)
+        );
+
+    if (!pendingBaselineReady || newUsers.length === 0) {
+        return;
+    }
+
+    const notification =
+        document.getElementById(
+            "pending-notification"
+        );
+
+    if (notification) {
+        notification.textContent =
+            newUsers.length === 1
+                ? "A new registration is waiting for approval."
+                : `${newUsers.length} new registrations are waiting for approval.`;
+        notification.className = "message success";
+    }
+
+    document.title = "New registration | Empower Hope";
+}
+
+
+function clearPendingNotification() {
+
+    const notification =
+        document.getElementById(
+            "pending-notification"
+        );
+
+    if (notification) {
+        notification.textContent = "";
+        notification.className = "message";
+    }
+
+    document.title = "Admin | Empower Hope";
+}
+
+
 async function loadPending() {
 
     const {
@@ -188,6 +236,14 @@ async function loadPending() {
         Array.isArray(data)
             ? data
             : [];
+
+    notifyNewPendingUsers(users);
+
+    pendingUserIds = new Set(
+        users.map((user) => user.id)
+    );
+
+    pendingBaselineReady = true;
 
 
     if (users.length === 0) {
@@ -345,6 +401,7 @@ async function processApproval(button) {
         response.ok
     ) {
 
+        clearPendingNotification();
         await loadPending();
         await loadUsers();
     }
@@ -962,6 +1019,11 @@ async function initializeAdmin() {
     await loadUsers();
 
     await loadAuditLog();
+
+    window.setInterval(
+        loadPending,
+        10000
+    );
 }
 
 

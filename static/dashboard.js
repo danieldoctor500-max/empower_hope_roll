@@ -286,6 +286,9 @@ async function loadStudents() {
     const classFilter =
         document.getElementById("class-filter");
 
+    const searchInput =
+        document.getElementById("student-search");
+
     if (!classFilter) {
         return;
     }
@@ -317,7 +320,24 @@ async function loadStudents() {
         return;
     }
 
-    const students = studentResult.data;
+    const searchTerm = searchInput
+        ? searchInput.value.trim().toLowerCase()
+        : "";
+
+    const students = studentResult.data.filter(
+        (student) => {
+            if (!searchTerm) return true;
+
+            return [
+                student.full_name,
+                student.student_number,
+            ].some((value) =>
+                String(value || "")
+                    .toLowerCase()
+                    .includes(searchTerm)
+            );
+        }
+    );
 
     let attendanceUrl =
         `/api/attendance?date=${encodeURIComponent(date)}`;
@@ -401,6 +421,22 @@ async function loadStudents() {
                         >
                             Absent
                         </button>
+
+                        <button
+                            class="btn small"
+                            data-id="${escapeHtml(student.id)}"
+                            data-status="Late"
+                        >
+                            Late
+                        </button>
+
+                        <button
+                            class="btn small"
+                            data-id="${escapeHtml(student.id)}"
+                            data-status="Excused"
+                        >
+                            Excused
+                        </button>
                     </td>
                 </tr>
             `;
@@ -479,6 +515,116 @@ async function loadStudents() {
 
 
 // ============================================================
+// BULK ATTENDANCE
+// ============================================================
+
+const bulkAttendanceButton =
+    document.getElementById("bulk-attendance-btn");
+
+if (bulkAttendanceButton) {
+    bulkAttendanceButton.addEventListener("click", async () => {
+        const statusSelect =
+            document.getElementById("bulk-attendance-status");
+
+        const status = statusSelect ? statusSelect.value : "";
+        const classId = classFilter ? classFilter.value : "";
+        const date = dateInput ? dateInput.value : todayString();
+
+        if (!status) {
+            showMessage(
+                "attendance-message",
+                "Choose a bulk attendance status first."
+            );
+            return;
+        }
+
+        if (!classId) {
+            showMessage(
+                "attendance-message",
+                "Choose a class before marking filtered students."
+            );
+            return;
+        }
+
+        const searchInput =
+            document.getElementById("student-search");
+        const searchTerm = searchInput
+            ? searchInput.value.trim().toLowerCase()
+            : "";
+
+        const studentResult = await apiRequest(
+            `/api/students?class_id=${encodeURIComponent(classId)}`
+        );
+
+        if (!studentResult.ok) {
+            showMessage(
+                "attendance-message",
+                studentResult.data.error || "Unable to load students."
+            );
+            return;
+        }
+
+        const students = studentResult.data.filter((student) => {
+            if (!searchTerm) return true;
+
+            return [student.full_name, student.student_number].some(
+                (value) => String(value || "")
+                    .toLowerCase()
+                    .includes(searchTerm)
+            );
+        });
+
+        if (!students.length) {
+            showMessage(
+                "attendance-message",
+                "No filtered students are available to mark."
+            );
+            return;
+        }
+
+        bulkAttendanceButton.disabled = true;
+        let marked = 0;
+
+        for (const student of students) {
+            const result = await apiRequest(
+                "/api/attendance/mark",
+                {
+                    method: "POST",
+                    body: JSON.stringify({
+                        student_id: student.id,
+                        class_id: classId,
+                        date,
+                        status,
+                    }),
+                }
+            );
+
+            if (!result.ok) {
+                showMessage(
+                    "attendance-message",
+                    result.data.error ||
+                        `Marked ${marked} of ${students.length} students.`
+                );
+                bulkAttendanceButton.disabled = false;
+                await loadStudents();
+                return;
+            }
+
+            marked += 1;
+        }
+
+        bulkAttendanceButton.disabled = false;
+        showMessage(
+            "attendance-message",
+            `${marked} filtered student${marked === 1 ? "" : "s"} marked ${status}.`,
+            true
+        );
+        await loadStudents();
+    });
+}
+
+
+// ============================================================
 // ATTENDANCE FILTERS
 // ============================================================
 
@@ -488,6 +634,16 @@ const classFilter =
 if (classFilter) {
     classFilter.addEventListener(
         "change",
+        loadStudents
+    );
+}
+
+const studentSearch =
+    document.getElementById("student-search");
+
+if (studentSearch) {
+    studentSearch.addEventListener(
+        "input",
         loadStudents
     );
 }
@@ -662,7 +818,7 @@ async function runDailyReport() {
 
         if (summaryElement) {
             summaryElement.textContent =
-                `Total: ${summary.total} | ` +
+                `Total: ${summary.total_students} | ` +
                 `Present: ${summary.present} | ` +
                 `Absent: ${summary.absent}`;
         }

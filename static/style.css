@@ -510,14 +510,11 @@ html[data-theme="dark"] .icon-moon {
 
 .tab-panel {
   min-width: 100%;
-  opacity: 0.4;
-  transform: translateX(28px);
-  transition: opacity 0.45s ease, transform 0.45s ease;
+  opacity: 1;
 }
 
 .tab-panel.active {
   opacity: 1;
-  transform: translateX(0);
 }
 
 .auth-viewport {
@@ -527,7 +524,6 @@ html[data-theme="dark"] .icon-moon {
 .auth-track {
   display: flex;
   width: 200%;
-  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .auth-track .tab-panel {
@@ -540,8 +536,7 @@ html[data-theme="dark"] .icon-moon {
 }
 
 .auth-card.is-register #login-tab {
-  opacity: 0.4;
-  transform: translateX(-28px);
+  opacity: 1;
 }
 
 .auth-card.is-register #register-tab {

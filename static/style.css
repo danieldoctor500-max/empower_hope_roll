@@ -125,6 +125,42 @@ body:not(.app-page) {
       transparent 35%
     ),
     var(--bg);
+  overflow-x: hidden;
+}
+
+body:not(.app-page)::before,
+body:not(.app-page)::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(8px);
+  opacity: 0.42;
+}
+
+body:not(.app-page)::before {
+  top: 10%;
+  left: -90px;
+  background: rgba(37, 99, 235, 0.2);
+  animation: float-background-one 16s ease-in-out infinite alternate;
+}
+
+body:not(.app-page)::after {
+  right: -80px;
+  bottom: 8%;
+  background: rgba(219, 39, 119, 0.15);
+  animation: float-background-two 19s ease-in-out infinite alternate;
+}
+
+@keyframes float-background-one {
+  to { transform: translate(120px, 90px) scale(1.18); }
+}
+
+@keyframes float-background-two {
+  to { transform: translate(-100px, -70px) scale(0.82); }
 }
 
 .brand {
@@ -345,6 +381,46 @@ html[data-theme="dark"] .icon-moon {
   font-weight: 700;
 }
 
+.admin-overview-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-overview-header .hint {
+  margin-bottom: 18px;
+}
+
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-stat {
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.admin-stat-label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.admin-stat strong {
+  color: var(--text);
+  font-family: "Poppins", sans-serif;
+  font-size: 25px;
+}
+
 .accent-top {
   position: relative;
   overflow: hidden;
@@ -384,6 +460,7 @@ html[data-theme="dark"] .icon-moon {
 .auth-card {
   width: min(500px, 100%);
   margin: 0 auto;
+  overflow: hidden;
 }
 
 .tabs {
@@ -432,11 +509,88 @@ html[data-theme="dark"] .icon-moon {
    ========================================================= */
 
 .tab-panel {
-  display: none;
+  min-width: 100%;
+  opacity: 0.4;
+  transform: translateX(28px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
 }
 
 .tab-panel.active {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.auth-viewport {
+  overflow: hidden;
+}
+
+.auth-track {
+  display: flex;
+  width: 200%;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.auth-track .tab-panel {
   display: block;
+  width: 50%;
+}
+
+.auth-card.is-register .auth-track {
+  transform: translateX(-50%);
+}
+
+.auth-card.is-register #login-tab {
+  opacity: 0.4;
+  transform: translateX(-28px);
+}
+
+.auth-card.is-register #register-tab {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+
+.radio-group legend {
+  width: 100%;
+  margin-bottom: 2px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.radio-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+}
+
+.radio-option:has(input:checked) {
+  border-color: var(--primary);
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--primary);
+}
+
+.radio-option input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--primary);
 }
 
 /* =========================================================
@@ -855,6 +1009,10 @@ html[data-theme="light"] input[type="month"] {
     padding: 18px;
   }
 
+  .admin-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .filter-row {
     grid-template-columns: 1fr;
     gap: 0;
@@ -942,6 +1100,14 @@ html[data-theme="light"] input[type="month"] {
     font-size: 18px;
   }
 
+  .admin-overview-header {
+    flex-direction: column;
+  }
+
+  .admin-overview-header .btn {
+    width: auto;
+  }
+
   .btn {
     width: 100%;
   }
@@ -973,6 +1139,7 @@ html[data-theme="light"] input[type="month"] {
   *::before,
   *::after {
     transition: none !important;
+    animation: none !important;
     scroll-behavior: auto !important;
   }
 }

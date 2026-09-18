@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Super Admin | Empower Hope{% endblock %}
+
+{% block nav_links %}
+<a href="/dashboard" class="nav-link">Dashboard</a>
+<a href="/admin" class="nav-link">Admin</a>
+<a href="/super-admin" class="nav-link active">Super Admin</a>
+{% endblock %}
+
+{% block nav_user %}
+<button id="logout-btn" class="btn small logout" type="button">Log Out</button>
+{% endblock %}
+
+{% block tabbar_items %}
+<a href="/dashboard" class="tab-item">Dashboard</a>
+<a href="/admin" class="tab-item">Admin</a>
+<a href="/super-admin" class="tab-item active">Super Admin</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid">
+  <section class="card wide admin-overview">
+    <div class="admin-overview-header">
+      <div>
+        <h2>System Control</h2>
+        <p class="hint">Manage system access and organization administrators.</p>
+      </div>
+      <button id="refresh-super-admin-btn" class="btn small" type="button">Refresh</button>
+    </div>
+    <div class="admin-stats" aria-label="System summary">
+      <div class="admin-stat"><span class="admin-stat-label">Students</span><strong id="stat-students">0</strong></div>
+      <div class="admin-stat"><span class="admin-stat-label">Staff</span><strong id="stat-staff">0</strong></div>
+      <div class="admin-stat"><span class="admin-stat-label">Admins</span><strong id="stat-admins">0</strong></div>
+      <div class="admin-stat"><span class="admin-stat-label">Super admins</span><strong id="stat-super-admins">0</strong></div>
+      <div class="admin-stat"><span class="admin-stat-label">Pending</span><strong id="stat-pending">0</strong></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Create Organization Admin</h2>
+    <p class="hint">Organization admins manage approvals, staff, and attendance.</p>
+    <form id="create-admin-form">
+      <label>Full name<input name="full_name" required minlength="2" maxlength="100"></label>
+      <label>Username<input name="username" required minlength="3" maxlength="50"></label>
+      <label>Password<input name="password" type="password" required minlength="8"></label>
+      <button class="btn primary" type="submit">Create Admin</button>
+    </form>
+    <p id="admin-message" class="message" role="alert"></p>
+  </section>
+
+  <section class="card wide">
+    <h2>System Users</h2>
+    <div class="table-wrapper">
+      <table class="data-table" id="super-users-table">
+        <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Approved</th><th>Change role</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card wide">
+    <h2>System Audit Log</h2>
+    <div class="table-wrapper">
+      <table class="data-table" id="super-audit-table">
+        <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='super_admin.js') }}"></script>
+{% endblock %}

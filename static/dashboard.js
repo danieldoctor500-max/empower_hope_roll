@@ -113,8 +113,8 @@ async function loadMe() {
             `${me.full_name} (${me.role})`;
     }
 
-    // Admin navigation
-    if (me.role === "admin") {
+    // Organization and system administration navigation
+    if (me.role === "admin" || me.role === "super_admin") {
         const adminLink =
             document.getElementById("admin-link");
 
@@ -130,8 +130,16 @@ async function loadMe() {
         }
     }
 
+    if (me.role === "super_admin") {
+        const superAdminLink = document.getElementById("super-admin-link");
+        const superAdminTab = document.getElementById("tab-super-admin");
+
+        if (superAdminLink) superAdminLink.style.display = "inline-flex";
+        if (superAdminTab) superAdminTab.style.display = "flex";
+    }
+
     // Staff and admin sections
-    if (me.role === "staff" || me.role === "admin") {
+    if (me.role === "staff" || me.role === "admin" || me.role === "super_admin") {
         document
             .querySelectorAll(".staff-only")
             .forEach((element) => {
@@ -222,14 +230,19 @@ if (signinButton) {
     signinButton.addEventListener("click", async () => {
         const classSelect =
             document.getElementById("signclass-select");
+        const sessionSelect =
+            document.getElementById("sign-session-select");
 
         const class_id =
             classSelect ? classSelect.value : null;
+        const session_name =
+            sessionSelect ? sessionSelect.value : "class_session";
 
         const result = await apiRequest("/api/signin", {
             method: "POST",
             body: JSON.stringify({
                 class_id,
+                session_name,
             }),
         });
 
@@ -252,8 +265,16 @@ const signoutButton =
 
 if (signoutButton) {
     signoutButton.addEventListener("click", async () => {
+        const sessionSelect =
+            document.getElementById("sign-session-select");
+        const session_name =
+            sessionSelect ? sessionSelect.value : "class_session";
+
         const result = await apiRequest("/api/signout", {
             method: "POST",
+            body: JSON.stringify({
+                session_name,
+            }),
         });
 
         showMessage(
@@ -715,10 +736,20 @@ async function runDailyReport() {
             "report-daily-date"
         );
 
+    const sessionSelect =
+        document.getElementById(
+            "report-session-select"
+        );
+
     const classId =
         classSelect
             ? classSelect.value
             : "";
+
+    const sessionName =
+        sessionSelect
+            ? sessionSelect.value
+            : "class_session";
 
     const date =
         reportDate
@@ -726,7 +757,7 @@ async function runDailyReport() {
             : todayString();
 
     let url =
-        `/api/reports/daily?date=${encodeURIComponent(date)}`;
+        `/api/reports/session?date=${encodeURIComponent(date)}&session_name=${encodeURIComponent(sessionName)}`;
 
     if (classId) {
         url +=
@@ -747,8 +778,11 @@ async function runDailyReport() {
     }
 
     const rows =
+        result.data.rows ||
         result.data.records ||
-        result.data;
+        (Array.isArray(result.data)
+            ? result.data
+            : []);
 
     const tbody =
         document.querySelector(
@@ -762,8 +796,8 @@ async function runDailyReport() {
     if (!rows.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="4">
-                    No attendance records found.
+                <td colspan="6">
+                    No sign-in records found for this session.
                 </td>
             </tr>
         `;
@@ -797,8 +831,23 @@ async function runDailyReport() {
 
                         <td>
                             ${escapeHtml(
-                                row.status ||
-                                "Not marked"
+                                row.session_label ||
+                                row.session_name ||
+                                "-"
+                            )}
+                        </td>
+
+                        <td>
+                            ${escapeHtml(
+                                row.sign_in ||
+                                "-"
+                            )}
+                        </td>
+
+                        <td>
+                            ${escapeHtml(
+                                row.sign_out ||
+                                "-"
                             )}
                         </td>
                     </tr>
@@ -807,21 +856,14 @@ async function runDailyReport() {
             .join("");
     }
 
-    if (result.data.summary) {
-        const summary =
-            result.data.summary;
+    const summaryElement =
+        document.getElementById(
+            "report-daily-summary"
+        );
 
-        const summaryElement =
-            document.getElementById(
-                "report-daily-summary"
-            );
-
-        if (summaryElement) {
-            summaryElement.textContent =
-                `Total: ${summary.total_students} | ` +
-                `Present: ${summary.present} | ` +
-                `Absent: ${summary.absent}`;
-        }
+    if (summaryElement) {
+        summaryElement.textContent =
+            `${result.data.session_label || "Session"}: ${rows.length} record${rows.length === 1 ? "" : "s"}`;
     }
 }
 
@@ -877,8 +919,11 @@ async function runMonthlyReport() {
     }
 
     const rows =
+        result.data.rows ||
         result.data.records ||
-        result.data;
+        (Array.isArray(result.data)
+            ? result.data
+            : []);
 
     const tbody =
         document.querySelector(
@@ -1069,6 +1114,11 @@ function updateExportLinks() {
             "report-daily-date"
         );
 
+    const sessionSelect =
+        document.getElementById(
+            "report-session-select"
+        );
+
     const monthlyClass =
         document.getElementById(
             "report-monthly-class"
@@ -1112,6 +1162,16 @@ function updateExportLinks() {
             )}`;
 
         if (
+            sessionSelect &&
+            sessionSelect.value
+        ) {
+            query +=
+                `&session_name=${encodeURIComponent(
+                    sessionSelect.value
+                )}`;
+        }
+
+        if (
             dailyClass &&
             dailyClass.value
         ) {
@@ -1122,10 +1182,10 @@ function updateExportLinks() {
         }
 
         dailyXlsx.href =
-            `/api/reports/daily/export.xlsx?${query}`;
+            `/api/reports/session/export.xlsx?${query}`;
 
         dailyCsv.href =
-            `/api/reports/daily/export.csv?${query}`;
+            `/api/reports/session/export.csv?${query}`;
     }
 
 

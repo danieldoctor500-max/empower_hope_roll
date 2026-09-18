@@ -17,13 +17,10 @@ Milestone 3
 import csv
 import io
 import os
-import sqlite3
 from datetime import datetime
-from functools import wraps
 
 from flask import (
     Flask,
-    g,
     jsonify,
     render_template,
     request,
@@ -32,55 +29,39 @@ from flask import (
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from core.auth import (
+    class_exists,
+    current_user,
+    log_action,
+    login_required,
+    role_required,
+    user_to_dict,
+    valid_date,
+    valid_month,
+)
+from core.config import (
+    ATTENDANCE_STATUSES,
+    DATABASE,
+    ENVIRONMENT,
+    ROLES,
+    SECRET_KEY,
+    SUPER_ADMIN_ROLE,
+)
+from core.database import close_db, get_db, init_db
 
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE = os.path.join(BASE_DIR, "empower_hope.db")
-
-DEFAULT_CLASSES = [
-    "IT Class",
-    "Hair and Beauty",
-    "Catering",
-]
-
-USER_TYPES = [
-    "Student",
-    "Staff",
-    "Other",
-]
-
-ROLES = [
-    "student",
-    "staff",
-    "admin",
-]
-
-ATTENDANCE_STATUSES = [
-    "Present",
-    "Absent",
-    "Late",
-    "Excused",
-]
 
 app = Flask(__name__)
 
-ENVIRONMENT = os.environ.get(
-    "FLASK_ENV",
-    "development"
-).lower()
+SESSION_LABELS = {
+    "class_session": "Class session (9:00 AM - 1:00 PM)",
+    "morning_devotion": "Morning devotion (8:00 AM - 8:45 AM)",
+    "social_skills": "Social skills (2:00 PM - 3:30 PM)",
+}
 
-SECRET_KEY = os.environ.get("SECRET_KEY")
 
-if not SECRET_KEY:
-    if ENVIRONMENT == "production":
-        raise RuntimeError(
-            "SECRET_KEY must be set in production"
-        )
+def pretty_session_name(session_name):
+    return SESSION_LABELS.get(session_name, (session_name or "class_session").replace("_", " ").title())
 
-    SECRET_KEY = "development-only-change-this-key"
 
 app.config["SECRET_KEY"] = SECRET_KEY
 
@@ -91,336 +72,10 @@ if ENVIRONMENT == "production":
     app.config["SESSION_COOKIE_SECURE"] = True
 
 
-ADMIN_USERNAME = os.environ.get(
-    "ADMIN_USERNAME",
-    "admin"
-)
-
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
-
-if not ADMIN_PASSWORD:
-    if ENVIRONMENT == "production":
-        raise RuntimeError(
-            "ADMIN_PASSWORD must be set in production"
-        )
-
-    ADMIN_PASSWORD = "ChangeMe123!"
-
-
-# ============================================================================
-# DATABASE
-# ============================================================================
-
-def get_db():
-    if "db" not in g:
-        g.db = sqlite3.connect(
-            DATABASE,
-            timeout=10
-        )
-
-        g.db.row_factory = sqlite3.Row
-
-        g.db.execute("PRAGMA foreign_keys = ON")
-
-    return g.db
-
-
 @app.teardown_appcontext
-def close_db(exception=None):
-    db = g.pop("db", None)
+def close_db_handler(exception=None):
+    close_db(exception)
 
-    if db is not None:
-        db.close()
-
-
-def init_db():
-    db = sqlite3.connect(DATABASE)
-
-    db.execute("PRAGMA foreign_keys = ON")
-
-    db.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS classes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            full_name TEXT NOT NULL,
-            user_type TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'student',
-            class_id INTEGER REFERENCES classes(id) ON DELETE SET NULL,
-            student_number TEXT,
-            approved INTEGER NOT NULL DEFAULT 0,
-            created_at TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS sign_records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            class_id INTEGER REFERENCES classes(id) ON DELETE SET NULL,
-            date TEXT NOT NULL,
-            sign_in TEXT,
-            sign_out TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS attendance (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-            date TEXT NOT NULL,
-            status TEXT NOT NULL,
-            marked_by INTEGER REFERENCES users(id),
-            marked_at TEXT NOT NULL,
-            UNIQUE(student_id, class_id, date)
-        );
-
-        CREATE TABLE IF NOT EXISTS audit_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            actor_id INTEGER REFERENCES users(id),
-            action TEXT NOT NULL,
-            target TEXT,
-            timestamp TEXT NOT NULL
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_users_class
-        ON users(class_id);
-
-        CREATE INDEX IF NOT EXISTS idx_attendance_date
-        ON attendance(date);
-
-        CREATE INDEX IF NOT EXISTS idx_attendance_student
-        ON attendance(student_id);
-
-        CREATE INDEX IF NOT EXISTS idx_audit_timestamp
-        ON audit_log(timestamp);
-        """
-    )
-
-    # ------------------------------------------------------------------------
-    # Seed classes
-    # ------------------------------------------------------------------------
-
-    for class_name in DEFAULT_CLASSES:
-        db.execute(
-            "INSERT OR IGNORE INTO classes (name) VALUES (?)",
-            (class_name,)
-        )
-
-    # ------------------------------------------------------------------------
-    # Seed admin
-    # ------------------------------------------------------------------------
-
-    existing_admin = db.execute(
-        "SELECT id FROM users WHERE role = 'admin' LIMIT 1"
-    ).fetchone()
-
-    if not existing_admin:
-
-        db.execute(
-            """
-            INSERT INTO users (
-                username,
-                password_hash,
-                full_name,
-                user_type,
-                role,
-                approved,
-                created_at
-            )
-            VALUES (?, ?, ?, 'Staff', 'admin', 1, ?)
-            """,
-            (
-                ADMIN_USERNAME,
-                generate_password_hash(ADMIN_PASSWORD),
-                "System Administrator",
-                datetime.utcnow().isoformat(),
-            )
-        )
-
-        print("=" * 70)
-        print("FIRST-RUN ADMIN ACCOUNT CREATED")
-        print(f"Username: {ADMIN_USERNAME}")
-        print(f"Password: {ADMIN_PASSWORD}")
-        print("Change the password immediately after login.")
-        print("=" * 70)
-
-    db.commit()
-    db.close()
-
-
-# ============================================================================
-# AUDIT LOGGING
-# ============================================================================
-
-def log_action(actor_id, action, target=None):
-    db = get_db()
-
-    db.execute(
-        """
-        INSERT INTO audit_log (
-            actor_id,
-            action,
-            target,
-            timestamp
-        )
-        VALUES (?, ?, ?, ?)
-        """,
-        (
-            actor_id,
-            action,
-            target,
-            datetime.utcnow().isoformat(),
-        )
-    )
-
-    db.commit()
-
-
-# ============================================================================
-# AUTHENTICATION
-# ============================================================================
-
-def current_user():
-    user_id = session.get("user_id")
-
-    if not user_id:
-        return None
-
-    db = get_db()
-
-    return db.execute(
-        "SELECT * FROM users WHERE id = ?",
-        (user_id,)
-    ).fetchone()
-
-
-def login_required(fn):
-
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-
-        user = current_user()
-
-        if not user:
-            return jsonify({
-                "error": "Login required"
-            }), 401
-
-        if not user["approved"]:
-            session.clear()
-
-            return jsonify({
-                "error": "Account is not approved"
-            }), 403
-
-        return fn(*args, **kwargs)
-
-    return wrapper
-
-
-def role_required(*roles):
-
-    def decorator(fn):
-
-        @wraps(fn)
-        def wrapper(*args, **kwargs):
-
-            user = current_user()
-
-            if not user:
-                return jsonify({
-                    "error": "Login required"
-                }), 401
-
-            if not user["approved"]:
-                session.clear()
-
-                return jsonify({
-                    "error": "Account is not approved"
-                }), 403
-
-            if user["role"] not in roles:
-
-                return jsonify({
-                    "error": "You do not have permission to do that"
-                }), 403
-
-            return fn(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
-
-
-# ============================================================================
-# SERIALIZATION
-# ============================================================================
-
-def user_to_dict(row):
-
-    return {
-        "id": row["id"],
-        "username": row["username"],
-        "full_name": row["full_name"],
-        "user_type": row["user_type"],
-        "role": row["role"],
-        "class_id": row["class_id"],
-        "student_number": row["student_number"],
-        "approved": bool(row["approved"]),
-        "created_at": row["created_at"],
-    }
-
-
-def class_exists(class_id):
-
-    if not class_id:
-        return False
-
-    db = get_db()
-
-    row = db.execute(
-        "SELECT id FROM classes WHERE id = ?",
-        (class_id,)
-    ).fetchone()
-
-    return row is not None
-
-
-def valid_date(date_value):
-
-    try:
-        datetime.strptime(
-            date_value,
-            "%Y-%m-%d"
-        )
-
-        return True
-
-    except (ValueError, TypeError):
-        return False
-
-
-def valid_month(month_value):
-
-    try:
-        datetime.strptime(
-            month_value,
-            "%Y-%m"
-        )
-
-        return True
-
-    except (ValueError, TypeError):
-        return False
-
-
-# ============================================================================
-# PAGE ROUTES
-# ============================================================================
 
 @app.route("/")
 def index():
@@ -437,30 +92,17 @@ def admin_page():
     return render_template("admin_dashboard.html")
 
 
-# ============================================================================
-# CLASSES
-# ============================================================================
+@app.route("/super-admin")
+def super_admin_page():
+    return render_template("super_admin_dashboard.html")
+
 
 @app.route("/api/classes", methods=["GET"])
 def api_classes():
-
-    db = get_db()
-
-    rows = db.execute(
-        """
-        SELECT id, name
-        FROM classes
-        ORDER BY name
-        """
+    rows = get_db().execute(
+        "SELECT id, name FROM classes ORDER BY name"
     ).fetchall()
-
-    return jsonify([
-        {
-            "id": row["id"],
-            "name": row["name"]
-        }
-        for row in rows
-    ])
+    return jsonify([{"id": row["id"], "name": row["name"]} for row in rows])
 
 
 # ============================================================================
@@ -791,6 +433,18 @@ def api_signin():
     data = request.get_json(silent=True) or {}
 
     class_id = data.get("class_id")
+    session_name = (data.get("session_name") or "class_session").strip()
+
+    allowed_sessions = {
+        "class_session",
+        "morning_devotion",
+        "social_skills",
+    }
+
+    if session_name not in allowed_sessions:
+        return jsonify({
+            "error": "Invalid session selected"
+        }), 400
 
     if not class_id:
         class_id = user["class_id"]
@@ -835,6 +489,7 @@ def api_signin():
         WHERE user_id = ?
         AND date = ?
         AND class_id = ?
+        AND session_name = ?
         ORDER BY id DESC
         LIMIT 1
         """,
@@ -842,13 +497,14 @@ def api_signin():
             user["id"],
             today,
             class_id,
+            session_name,
         )
     ).fetchone()
 
     if existing and existing["sign_in"]:
 
         return jsonify({
-            "error": "Already signed in today"
+            "error": f"Already signed in for {session_name} today"
         }), 409
 
     if existing:
@@ -872,14 +528,16 @@ def api_signin():
             INSERT INTO sign_records (
                 user_id,
                 class_id,
+                session_name,
                 date,
                 sign_in
             )
-            VALUES (?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?)
             """,
             (
                 user["id"],
                 class_id,
+                session_name,
                 today,
                 now,
             )
@@ -890,11 +548,11 @@ def api_signin():
     log_action(
         user["id"],
         "sign_in",
-        target=f"class:{class_id} date:{today}"
+        target=f"class:{class_id} session:{session_name} date:{today}"
     )
 
     return jsonify({
-        "message": f"Signed in at {now}"
+        "message": f"Signed in at {now} for {pretty_session_name(session_name)}"
     })
 
 
@@ -908,6 +566,20 @@ def api_signout():
 
     user = current_user()
 
+    data = request.get_json(silent=True) or {}
+    session_name = (data.get("session_name") or "class_session").strip()
+
+    allowed_sessions = {
+        "class_session",
+        "morning_devotion",
+        "social_skills",
+    }
+
+    if session_name not in allowed_sessions:
+        return jsonify({
+            "error": "Invalid session selected"
+        }), 400
+
     today = datetime.now().strftime("%Y-%m-%d")
     now = datetime.now().strftime("%H:%M:%S")
 
@@ -919,6 +591,7 @@ def api_signout():
         FROM sign_records
         WHERE user_id = ?
         AND date = ?
+        AND session_name = ?
         AND sign_in IS NOT NULL
         ORDER BY id DESC
         LIMIT 1
@@ -926,19 +599,20 @@ def api_signout():
         (
             user["id"],
             today,
+            session_name,
         )
     ).fetchone()
 
     if not record:
 
         return jsonify({
-            "error": "You have not signed in today"
+            "error": f"You have not signed in for {session_name.replace('_', ' ').title()} today"
         }), 409
 
     if record["sign_out"]:
 
         return jsonify({
-            "error": "Already signed out today"
+            "error": f"Already signed out for {session_name.replace('_', ' ').title()} today"
         }), 409
 
     db.execute(
@@ -958,12 +632,158 @@ def api_signout():
     log_action(
         user["id"],
         "sign_out",
-        target=f"date:{today}"
+        target=f"session:{session_name} date:{today}"
     )
 
     return jsonify({
-        "message": f"Signed out at {now}"
+        "message": f"Signed out at {now} for {pretty_session_name(session_name)}"
     })
+
+
+# ============================================================================
+# SESSION REPORTS
+# ============================================================================
+
+@app.route("/api/reports/session", methods=["GET"])
+@role_required("staff", "admin")
+def api_session_report():
+
+    date = request.args.get("date", datetime.now().strftime("%Y-%m-%d"))
+    class_id = request.args.get("class_id")
+    session_name = request.args.get("session_name", "class_session")
+
+    if not valid_date(date):
+        return jsonify({"error": "Invalid date"}), 400
+
+    allowed_sessions = {"class_session", "morning_devotion", "social_skills"}
+    if session_name not in allowed_sessions:
+        return jsonify({"error": "Invalid session selected"}), 400
+
+    db = get_db()
+
+    query = """
+        SELECT
+            u.full_name,
+            u.student_number,
+            c.name AS class_name,
+            sr.session_name,
+            sr.sign_in,
+            sr.sign_out,
+            sr.date
+        FROM sign_records sr
+        JOIN users u ON u.id = sr.user_id
+        JOIN classes c ON c.id = sr.class_id
+        WHERE sr.date = ?
+        AND sr.session_name = ?
+    """
+
+    params = [date, session_name]
+
+    if class_id:
+        query += " AND sr.class_id = ?"
+        params.append(class_id)
+
+    query += " ORDER BY c.name, u.full_name"
+
+    rows = db.execute(query, params).fetchall()
+
+    results = [{
+        "full_name": row["full_name"],
+        "student_number": row["student_number"],
+        "class_name": row["class_name"],
+        "session_name": row["session_name"],
+        "session_label": pretty_session_name(row["session_name"]),
+        "sign_in": row["sign_in"],
+        "sign_out": row["sign_out"],
+        "date": row["date"],
+    } for row in rows]
+
+    return jsonify({
+        "date": date,
+        "session_name": session_name,
+        "session_label": pretty_session_name(session_name),
+        "rows": results,
+    })
+
+
+@app.route("/api/reports/session/export.csv")
+@role_required("staff", "admin")
+def export_session_csv():
+    date = request.args.get("date", datetime.now().strftime("%Y-%m-%d"))
+    class_id = request.args.get("class_id")
+    session_name = request.args.get("session_name", "class_session")
+
+    if not valid_date(date):
+        return jsonify({"error": "Invalid date"}), 400
+
+    db = get_db()
+    query = """
+        SELECT
+            c.name,
+            u.full_name,
+            u.student_number,
+            sr.session_name,
+            sr.sign_in,
+            sr.sign_out
+        FROM sign_records sr
+        JOIN users u ON u.id = sr.user_id
+        JOIN classes c ON c.id = sr.class_id
+        WHERE sr.date = ?
+        AND sr.session_name = ?
+    """
+    params = [date, session_name]
+    if class_id:
+        query += " AND sr.class_id = ?"
+        params.append(class_id)
+    query += " ORDER BY c.name, u.full_name"
+
+    rows = db.execute(query, params).fetchall()
+    export_rows = [[row[0], row[1], row[2], pretty_session_name(row[3]), row[4] or "-", row[5] or "-"] for row in rows]
+    return make_csv(
+        f"session_{session_name}_{date}.csv",
+        ["Class", "Student", "Student Number", "Session", "Sign In", "Sign Out"],
+        export_rows,
+    )
+
+
+@app.route("/api/reports/session/export.xlsx")
+@role_required("staff", "admin")
+def export_session_excel():
+    date = request.args.get("date", datetime.now().strftime("%Y-%m-%d"))
+    class_id = request.args.get("class_id")
+    session_name = request.args.get("session_name", "class_session")
+
+    if not valid_date(date):
+        return jsonify({"error": "Invalid date"}), 400
+
+    db = get_db()
+    query = """
+        SELECT
+            c.name,
+            u.full_name,
+            u.student_number,
+            sr.session_name,
+            sr.sign_in,
+            sr.sign_out
+        FROM sign_records sr
+        JOIN users u ON u.id = sr.user_id
+        JOIN classes c ON c.id = sr.class_id
+        WHERE sr.date = ?
+        AND sr.session_name = ?
+    """
+    params = [date, session_name]
+    if class_id:
+        query += " AND sr.class_id = ?"
+        params.append(class_id)
+    query += " ORDER BY c.name, u.full_name"
+
+    rows = db.execute(query, params).fetchall()
+    export_rows = [[row[0], row[1], row[2], pretty_session_name(row[3]), row[4] or "-", row[5] or "-"] for row in rows]
+    return make_excel(
+        f"session_{session_name}_{date}.xlsx",
+        ["Class", "Student", "Student Number", "Session", "Sign In", "Sign Out"],
+        export_rows,
+    )
 
 
 # ============================================================================
@@ -1859,7 +1679,7 @@ def export_monthly_excel():
 # ============================================================================
 
 @app.route("/api/admin/pending", methods=["GET"])
-@role_required("admin")
+@role_required("admin", SUPER_ADMIN_ROLE)
 def api_admin_pending():
 
     db = get_db()
@@ -1884,7 +1704,7 @@ def api_admin_pending():
 # ============================================================================
 
 @app.route("/api/admin/users", methods=["GET"])
-@role_required("admin")
+@role_required("admin", SUPER_ADMIN_ROLE)
 def api_admin_users():
 
     db = get_db()
@@ -1911,7 +1731,7 @@ def api_admin_users():
     "/api/admin/approve/<int:user_id>",
     methods=["POST"]
 )
-@role_required("admin")
+@role_required("admin", SUPER_ADMIN_ROLE)
 def api_admin_approve(user_id):
 
     db = get_db()
@@ -1971,7 +1791,7 @@ def api_admin_approve(user_id):
     "/api/admin/reject/<int:user_id>",
     methods=["POST"]
 )
-@role_required("admin")
+@role_required("admin", SUPER_ADMIN_ROLE)
 def api_admin_reject(user_id):
 
     db = get_db()
@@ -2030,7 +1850,7 @@ def api_admin_reject(user_id):
     "/api/admin/create-staff",
     methods=["POST"]
 )
-@role_required("admin")
+@role_required("admin", SUPER_ADMIN_ROLE)
 def api_admin_create_staff():
 
     data = request.get_json(silent=True) or {}
@@ -2129,7 +1949,7 @@ def api_admin_create_staff():
     "/api/admin/reset-password/<int:user_id>",
     methods=["POST"]
 )
-@role_required("admin")
+@role_required("admin", SUPER_ADMIN_ROLE)
 def api_admin_reset_password(user_id):
 
     data = request.get_json(silent=True) or {}
@@ -2201,7 +2021,7 @@ def api_admin_reset_password(user_id):
     "/api/admin/set-role/<int:user_id>",
     methods=["POST"]
 )
-@role_required("admin")
+@role_required("admin", SUPER_ADMIN_ROLE)
 def api_admin_set_role(user_id):
 
     data = request.get_json(silent=True) or {}
@@ -2219,7 +2039,7 @@ def api_admin_set_role(user_id):
 
     actor = current_user()
 
-    if user_id == actor["id"] and new_role != "admin":
+    if user_id == actor["id"] and new_role != actor["role"]:
 
         return jsonify({
             "error": (
@@ -2243,6 +2063,12 @@ def api_admin_set_role(user_id):
         return jsonify({
             "error": "User not found"
         }), 404
+
+    if row["role"] == SUPER_ADMIN_ROLE:
+
+        return jsonify({
+            "error": "Only a super administrator can manage that account"
+        }), 403
 
     # Prevent accidentally removing the last admin.
     if row["role"] == "admin" and new_role != "admin":
@@ -2299,7 +2125,7 @@ def api_admin_set_role(user_id):
     "/api/admin/audit-log",
     methods=["GET"]
 )
-@role_required("admin")
+@role_required("admin", SUPER_ADMIN_ROLE)
 def api_admin_audit_log():
 
     db = get_db()
@@ -2334,6 +2160,11 @@ with app.app_context():
 
     else:
         init_db()
+
+
+from super_admin import super_admin_blueprint
+
+app.register_blueprint(super_admin_blueprint)
 
 
 if __name__ == "__main__":

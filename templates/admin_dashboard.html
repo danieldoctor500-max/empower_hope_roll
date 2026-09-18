@@ -62,6 +62,59 @@ Admin | Empower Hope
 
 
   <!-- ================================================================ -->
+  <!-- ADMIN OVERVIEW -->
+  <!-- ================================================================ -->
+
+  <section class="card wide admin-overview">
+
+    <div class="admin-overview-header">
+
+      <div>
+        <h2>Admin Overview</h2>
+
+        <p class="hint">
+          A quick view of account activity and approvals.
+        </p>
+      </div>
+
+      <button
+        id="refresh-admin-btn"
+        class="btn small"
+        type="button"
+      >
+        Refresh
+      </button>
+
+    </div>
+
+    <div class="admin-stats" aria-label="Admin account summary">
+
+      <div class="admin-stat">
+        <span class="admin-stat-label">Pending</span>
+        <strong id="stat-pending">0</strong>
+      </div>
+
+      <div class="admin-stat">
+        <span class="admin-stat-label">Total users</span>
+        <strong id="stat-total-users">0</strong>
+      </div>
+
+      <div class="admin-stat">
+        <span class="admin-stat-label">Approved</span>
+        <strong id="stat-approved-users">0</strong>
+      </div>
+
+      <div class="admin-stat">
+        <span class="admin-stat-label">Staff &amp; admins</span>
+        <strong id="stat-staff-users">0</strong>
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ================================================================ -->
   <!-- PENDING APPROVALS -->
   <!-- ================================================================ -->
 

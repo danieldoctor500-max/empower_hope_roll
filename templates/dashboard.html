@@ -23,6 +23,15 @@ Dashboard | Empower Hope
   Admin
 </a>
 
+<a
+  href="/super-admin"
+  id="super-admin-link"
+  class="nav-link"
+  style="display:none;"
+>
+  Super Admin
+</a>
+
 {% endblock %}
 
 
@@ -62,6 +71,15 @@ Dashboard | Empower Hope
   <span>Admin</span>
 </a>
 
+<a
+  href="/super-admin"
+  id="tab-super-admin"
+  class="tab-item"
+  style="display:none;"
+>
+  <span>Super Admin</span>
+</a>
+
 {% endblock %}
 
 
@@ -84,6 +102,16 @@ Dashboard | Empower Hope
       Record your daily arrival and departure.
     </p>
 
+
+    <label>
+      Session
+
+      <select id="sign-session-select">
+        <option value="class_session">Class session (9:00 AM - 1:00 PM)</option>
+        <option value="morning_devotion">Morning devotion (8:00 AM - 8:45 AM)</option>
+        <option value="social_skills">Social skills (2:00 PM - 3:30 PM)</option>
+      </select>
+    </label>
 
     <label>
       Class
@@ -346,6 +374,15 @@ Dashboard | Empower Hope
 
         </label>
 
+        <label>
+          Session
+
+          <select id="report-session-select">
+            <option value="class_session">Class session</option>
+            <option value="morning_devotion">Morning devotion</option>
+            <option value="social_skills">Social skills</option>
+          </select>
+        </label>
 
         <label>
           Date
@@ -408,7 +445,9 @@ Dashboard | Empower Hope
               <th>Class</th>
               <th>Student</th>
               <th>Student #</th>
-              <th>Status</th>
+              <th>Session</th>
+              <th>Sign In</th>
+              <th>Sign Out</th>
             </tr>
 
           </thead>

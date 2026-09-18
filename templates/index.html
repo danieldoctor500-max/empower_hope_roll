@@ -44,7 +44,7 @@
   </header>
 
 
-  <main class="card auth-card">
+  <main class="card auth-card" id="auth-card">
 
     <div class="tabs">
 
@@ -69,12 +69,16 @@
 
     <!-- LOGIN -->
 
-    <section
-      id="login-tab"
-      class="tab-panel active"
-    >
+    <div class="auth-viewport">
 
-      <form id="login-form">
+      <div class="auth-track">
+
+        <section
+          id="login-tab"
+          class="tab-panel active"
+        >
+
+          <form id="login-form">
 
         <label>
           Username
@@ -91,8 +95,30 @@
         </label>
 
 
-        <label>
-          Password
+            <fieldset class="radio-group">
+
+              <legend>Account type</legend>
+
+              <label class="radio-option">
+                <input type="radio" name="user_type" value="Student" checked>
+                <span>Student</span>
+              </label>
+
+              <label class="radio-option">
+                <input type="radio" name="user_type" value="Staff">
+                <span>Staff</span>
+              </label>
+
+              <label class="radio-option">
+                <input type="radio" name="user_type" value="Other">
+                <span>Other</span>
+              </label>
+
+            </fieldset>
+
+
+            <label>
+              Password
 
           <input
             type="password"
@@ -101,27 +127,27 @@
             autocomplete="current-password"
           >
 
-        </label>
+          </label>
 
 
-        <button
-          type="submit"
-          class="btn primary"
-        >
-          Log In
-        </button>
+            <button
+              type="submit"
+              class="btn primary"
+            >
+              Log In
+            </button>
 
-      </form>
+          </form>
 
-    </section>
+        </section>
 
 
     <!-- REGISTRATION -->
 
-    <section
-      id="register-tab"
-      class="tab-panel"
-    >
+        <section
+          id="register-tab"
+          class="tab-panel"
+        >
 
       <p class="hint">
 
@@ -185,22 +211,21 @@
         </label>
 
 
-        <label>
-          I am a
+            <fieldset class="radio-group">
 
-          <select name="user_type" id="user-type">
+              <legend>I am a</legend>
 
-            <option value="Student">
-              Student
-            </option>
+              <label class="radio-option">
+                <input type="radio" name="user_type" value="Student" checked>
+                <span>Student</span>
+              </label>
 
-            <option value="Other">
-              Other
-            </option>
+              <label class="radio-option">
+                <input type="radio" name="user_type" value="Other">
+                <span>Other</span>
+              </label>
 
-          </select>
-
-        </label>
+            </fieldset>
 
 
         <label id="student-number-label">
@@ -245,7 +270,11 @@
 
       </form>
 
-    </section>
+        </section>
+
+      </div>
+
+    </div>
 
 
     <p

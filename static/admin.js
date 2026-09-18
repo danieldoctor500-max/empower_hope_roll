@@ -124,7 +124,7 @@ async function requireAdmin() {
 
     if (
         !data.user ||
-        data.user.role !== "admin"
+        !["admin", "super_admin"].includes(data.user.role)
     ) {
 
         alert(
@@ -148,6 +148,44 @@ async function requireAdmin() {
 
 let pendingUserIds = new Set();
 let pendingBaselineReady = false;
+
+
+function updatePendingStat(users) {
+
+    const stat =
+        document.getElementById("stat-pending");
+
+    if (stat) {
+        stat.textContent = users.length;
+    }
+}
+
+
+function updateUserStats(users) {
+
+    const approvedCount =
+        users.filter((user) => user.approved).length;
+
+    const staffCount =
+        users.filter(
+            (user) =>
+                user.role === "staff" ||
+                user.role === "admin"
+        ).length;
+
+    const totalStat =
+        document.getElementById("stat-total-users");
+
+    const approvedStat =
+        document.getElementById("stat-approved-users");
+
+    const staffStat =
+        document.getElementById("stat-staff-users");
+
+    if (totalStat) totalStat.textContent = users.length;
+    if (approvedStat) approvedStat.textContent = approvedCount;
+    if (staffStat) staffStat.textContent = staffCount;
+}
 
 
 function notifyNewPendingUsers(users) {
@@ -236,6 +274,8 @@ async function loadPending() {
         Array.isArray(data)
             ? data
             : [];
+
+    updatePendingStat(users);
 
     notifyNewPendingUsers(users);
 
@@ -460,6 +500,8 @@ async function loadUsers() {
         Array.isArray(data)
             ? data
             : [];
+
+    updateUserStats(users);
 
 
     tbody.innerHTML =
@@ -1002,6 +1044,50 @@ if (createStaffFab) {
 
 
 // ============================================================================
+// REFRESH
+// ============================================================================
+
+const refreshAdminButton =
+    document.getElementById(
+        "refresh-admin-btn"
+    );
+
+
+async function refreshAdminData() {
+
+    if (refreshAdminButton) {
+        setButtonLoading(
+            refreshAdminButton,
+            true,
+            "Refreshing..."
+        );
+    }
+
+    await Promise.all([
+        loadPending(),
+        loadUsers(),
+        loadAuditLog(),
+    ]);
+
+    if (refreshAdminButton) {
+        setButtonLoading(
+            refreshAdminButton,
+            false
+        );
+    }
+}
+
+
+if (refreshAdminButton) {
+
+    refreshAdminButton.addEventListener(
+        "click",
+        refreshAdminData
+    );
+}
+
+
+// ============================================================================
 // INITIALIZATION
 // ============================================================================
 
@@ -1014,11 +1100,7 @@ async function initializeAdmin() {
         return;
     }
 
-    await loadPending();
-
-    await loadUsers();
-
-    await loadAuditLog();
+    await refreshAdminData();
 
     window.setInterval(
         loadPending,

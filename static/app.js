@@ -67,6 +67,15 @@ document.querySelectorAll(".tab-btn").forEach((button) => {
 
         if (!tabName) return;
 
+        const authCard = document.getElementById("auth-card");
+
+        if (authCard) {
+            authCard.classList.toggle(
+                "is-register",
+                tabName === "register"
+            );
+        }
+
         document
             .querySelectorAll(".tab-btn")
             .forEach((btn) => {
@@ -168,9 +177,6 @@ loadClasses();
 // USER TYPE
 // ============================================================================
 
-const userType =
-    document.getElementById("user-type");
-
 const classLabel =
     document.getElementById(
         "registration-class-label"
@@ -179,12 +185,22 @@ const classLabel =
 const classSelect =
     document.getElementById("class-select");
 
+const registrationTypeInputs =
+    document.querySelectorAll(
+        "#register-form input[name='user_type']"
+    );
+
 
 function updateRegistrationFields() {
 
-    if (!userType) return;
+    const selectedType =
+        document.querySelector(
+            "#register-form input[name='user_type']:checked"
+        );
 
-    if (userType.value === "Student") {
+    if (!selectedType) return;
+
+    if (selectedType.value === "Student") {
 
         classLabel.style.display = "block";
         classSelect.required = true;
@@ -197,15 +213,15 @@ function updateRegistrationFields() {
 }
 
 
-if (userType) {
+registrationTypeInputs.forEach((input) => {
 
-    userType.addEventListener(
+    input.addEventListener(
         "change",
         updateRegistrationFields
     );
+});
 
-    updateRegistrationFields();
-}
+updateRegistrationFields();
 
 
 // ============================================================================

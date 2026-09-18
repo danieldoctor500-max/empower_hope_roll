@@ -509,11 +509,13 @@ html[data-theme="dark"] .icon-moon {
    ========================================================= */
 
 .tab-panel {
+  display: none;
   min-width: 100%;
   opacity: 1;
 }
 
 .tab-panel.active {
+  display: block;
   opacity: 1;
 }
 

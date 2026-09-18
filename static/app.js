@@ -277,7 +277,9 @@ if (loginForm) {
             if (response && response.ok) {
 
                 window.location.href =
-                    "/dashboard";
+                    data.user && data.user.role === "super_admin"
+                        ? "/super-admin"
+                        : "/dashboard";
 
                 return;
             }

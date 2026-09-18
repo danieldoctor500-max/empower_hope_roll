@@ -552,7 +552,10 @@ def api_signin():
     )
 
     return jsonify({
-        "message": f"Signed in at {now} for {pretty_session_name(session_name)}"
+        "message": f"Signed in at {now} on {today} for {pretty_session_name(session_name)}",
+        "date": today,
+        "time": now,
+        "session_name": session_name,
     })
 
 
@@ -636,7 +639,10 @@ def api_signout():
     )
 
     return jsonify({
-        "message": f"Signed out at {now} for {pretty_session_name(session_name)}"
+        "message": f"Signed out at {now} on {today} for {pretty_session_name(session_name)}",
+        "date": today,
+        "time": now,
+        "session_name": session_name,
     })
 
 

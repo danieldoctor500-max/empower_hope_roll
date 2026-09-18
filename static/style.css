@@ -522,26 +522,27 @@ html[data-theme="dark"] .icon-moon {
 }
 
 .auth-track {
-  display: flex;
-  width: 200%;
+  display: block;
+  width: 100%;
 }
 
 .auth-track .tab-panel {
   display: block;
-  width: 50%;
+  width: 100%;
 }
 
 .auth-card.is-register .auth-track {
-  transform: translateX(-50%);
+  display: block;
 }
 
 .auth-card.is-register #login-tab {
+  display: none;
   opacity: 1;
 }
 
 .auth-card.is-register #register-tab {
+  display: block;
   opacity: 1;
-  transform: translateX(0);
 }
 
 .radio-group {

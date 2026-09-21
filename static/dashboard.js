@@ -78,6 +78,30 @@ function currentMonthString() {
 }
 
 
+function updateSignStatus(data) {
+    const date = document.getElementById("sign-status-date");
+    const signIn = document.getElementById("sign-status-in");
+    const signOut = document.getElementById("sign-status-out");
+
+    if (date) {
+        date.textContent = `${data.date || "Today"} (${data.timezone || "local time"})`;
+    }
+    if (signIn) signIn.textContent = `Sign in: ${data.sign_in || "-"}`;
+    if (signOut) signOut.textContent = `Sign out: ${data.sign_out || "-"}`;
+}
+
+
+async function loadSignStatus() {
+    const sessionSelect = document.getElementById("sign-session-select");
+    const sessionName = sessionSelect ? sessionSelect.value : "class_session";
+    const result = await apiRequest(
+        `/api/sign-status?session_name=${encodeURIComponent(sessionName)}`
+    );
+
+    if (result.ok) updateSignStatus(result.data);
+}
+
+
 function escapeHtml(value) {
     if (value === null || value === undefined) {
         return "";
@@ -252,6 +276,8 @@ if (signinButton) {
                 result.data.error,
             result.ok
         );
+
+        if (result.ok) loadSignStatus();
     });
 }
 
@@ -283,8 +309,16 @@ if (signoutButton) {
                 result.data.error,
             result.ok
         );
+
+        if (result.ok) loadSignStatus();
     });
 }
+
+
+document.getElementById("sign-session-select")?.addEventListener(
+    "change",
+    loadSignStatus
+);
 
 
 // ============================================================
@@ -1351,6 +1385,7 @@ if (logoutButton) {
 async function initializeDashboard() {
     await loadClasses();
     await loadMe();
+    await loadSignStatus();
     updateExportLinks();
 }
 

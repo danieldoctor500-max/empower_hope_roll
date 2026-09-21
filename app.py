@@ -498,8 +498,10 @@ def api_signin():
             "error": "Selected class does not exist"
         }), 400
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    now = datetime.now().strftime("%H:%M:%S")
+    current_time = datetime.now().astimezone()
+    today = current_time.strftime("%Y-%m-%d")
+    now = current_time.strftime("%H:%M:%S")
+    timezone_name = current_time.tzname() or "local time"
 
     db = get_db()
 
@@ -576,6 +578,7 @@ def api_signin():
         "message": f"Signed in at {now} on {today} for {pretty_session_name(session_name)}",
         "date": today,
         "time": now,
+        "timezone": timezone_name,
         "session_name": session_name,
     })
 
@@ -604,8 +607,10 @@ def api_signout():
             "error": "Invalid session selected"
         }), 400
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    now = datetime.now().strftime("%H:%M:%S")
+    current_time = datetime.now().astimezone()
+    today = current_time.strftime("%Y-%m-%d")
+    now = current_time.strftime("%H:%M:%S")
+    timezone_name = current_time.tzname() or "local time"
 
     db = get_db()
 
@@ -663,7 +668,45 @@ def api_signout():
         "message": f"Signed out at {now} on {today} for {pretty_session_name(session_name)}",
         "date": today,
         "time": now,
+        "timezone": timezone_name,
         "session_name": session_name,
+    })
+
+
+@app.route("/api/sign-status", methods=["GET"])
+@login_required
+def api_sign_status():
+
+    user = current_user()
+    session_name = (request.args.get("session_name") or "class_session").strip()
+    allowed_sessions = {
+        "class_session",
+        "morning_devotion",
+        "social_skills",
+    }
+
+    if session_name not in allowed_sessions:
+        return jsonify({"error": "Invalid session selected"}), 400
+
+    current_time = datetime.now().astimezone()
+    today = current_time.strftime("%Y-%m-%d")
+    record = get_db().execute(
+        """
+        SELECT sign_in, sign_out
+        FROM sign_records
+        WHERE user_id = ? AND date = ? AND session_name = ?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (user["id"], today, session_name),
+    ).fetchone()
+
+    return jsonify({
+        "date": today,
+        "session_name": session_name,
+        "sign_in": record["sign_in"] if record else None,
+        "sign_out": record["sign_out"] if record else None,
+        "timezone": current_time.tzname() or "local time",
     })
 
 

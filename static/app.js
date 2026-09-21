@@ -2,6 +2,11 @@
 
 const messageEl = document.getElementById("message");
 
+const initialAuthCard = document.getElementById("auth-card");
+if (initialAuthCard) {
+    initialAuthCard.classList.add("is-register");
+}
+
 
 function showMessage(text, isSuccess = false) {
     messageEl.textContent = text || "";
@@ -381,4 +386,44 @@ if (registerForm) {
             );
         }
     );
+}
+
+const forgotPasswordForm = document.getElementById("forgot-password-form");
+if (forgotPasswordForm) {
+    forgotPasswordForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const result = await getJson("/api/forgot-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(Object.fromEntries(new FormData(forgotPasswordForm))),
+        });
+        const message = document.getElementById("forgot-message");
+        if (message) {
+            message.textContent = result.data.reset_url
+                ? `${result.data.message} Local reset link: ${result.data.reset_url}`
+                : (result.data.message || result.data.error || "Request failed.");
+            message.className = "message" + (result.response && result.response.ok ? " success" : "");
+        }
+    });
+}
+
+const resetPasswordForm = document.getElementById("reset-password-form");
+if (resetPasswordForm) {
+    resetPasswordForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const result = await getJson("/api/reset-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(Object.fromEntries(new FormData(resetPasswordForm))),
+        });
+        const message = document.getElementById("reset-message");
+        if (message) {
+            message.textContent = result.data.message || result.data.error || "Request failed.";
+            message.className = "message" + (result.response && result.response.ok ? " success" : "");
+            if (result.response && result.response.ok) {
+                resetPasswordForm.reset();
+                setTimeout(() => { window.location.href = "/"; }, 1200);
+            }
+        }
+    });
 }

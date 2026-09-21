@@ -15,17 +15,23 @@ Milestone 3
 """
 
 import csv
+import hashlib
 import io
 import os
+import secrets
+import smtplib
 from datetime import datetime
+from email.message import EmailMessage
 
 from flask import (
     Flask,
     jsonify,
+    redirect,
     render_template,
     request,
     session,
     send_file,
+    url_for,
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -43,6 +49,14 @@ from core.config import (
     ATTENDANCE_STATUSES,
     DATABASE,
     ENVIRONMENT,
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    GOOGLE_REDIRECT_URI,
+    MAIL_FROM,
+    MAIL_PASSWORD,
+    MAIL_PORT,
+    MAIL_SERVER,
+    MAIL_USERNAME,
     ROLES,
     SECRET_KEY,
     SUPER_ADMIN_ROLE,
@@ -64,6 +78,21 @@ def pretty_session_name(session_name):
 
 
 app.config["SECRET_KEY"] = SECRET_KEY
+
+try:
+    from authlib.integrations.flask_client import OAuth
+except ImportError:
+    OAuth = None
+
+oauth = OAuth(app) if OAuth else None
+if oauth and GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
+    oauth.register(
+        name="google",
+        client_id=GOOGLE_CLIENT_ID,
+        client_secret=GOOGLE_CLIENT_SECRET,
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={"scope": "openid email profile"},
+    )
 
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
@@ -117,6 +146,7 @@ def api_register():
     username = (data.get("username") or "").strip()
     password = data.get("password") or ""
     full_name = (data.get("full_name") or "").strip()
+    email = (data.get("email") or "").strip().lower()
 
     user_type = data.get(
         "user_type",
@@ -133,10 +163,10 @@ def api_register():
     # Validation
     # ------------------------------------------------------------------------
 
-    if not username or not full_name or not password:
+    if not username or not full_name or not password or not email:
 
         return jsonify({
-            "error": "Username, full name and password are required"
+            "error": "Full name, username, email and password are required"
         }), 400
 
     if len(username) < 3:
@@ -225,9 +255,10 @@ def api_register():
             class_id,
             student_number,
             approved,
+            email,
             created_at
         )
-        VALUES (?, ?, ?, ?, 'student', ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, 'student', ?, ?, ?, ?, ?)
         """,
         (
             username,
@@ -237,6 +268,7 @@ def api_register():
             class_id,
             student_number or None,
             approved,
+            email,
             datetime.utcnow().isoformat(),
         )
     )
@@ -324,6 +356,126 @@ def api_login():
         "message": "Logged in successfully",
         "user": user_to_dict(user)
     })
+
+
+@app.route("/auth/google")
+def google_login():
+    if not oauth or not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        return redirect("/?google=unavailable")
+    return oauth.google.authorize_redirect(GOOGLE_REDIRECT_URI)
+
+
+@app.route("/auth/google/callback")
+def google_callback():
+    if not oauth or not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        return redirect("/?google=unavailable")
+
+    token = oauth.google.authorize_access_token()
+    profile = token.get("userinfo") or oauth.google.userinfo()
+    google_id = profile.get("sub")
+    email = (profile.get("email") or "").strip().lower()
+    full_name = (profile.get("name") or email or "Google user").strip()
+
+    if not google_id or not email:
+        return redirect("/?google=invalid")
+
+    db = get_db()
+    user = db.execute(
+        "SELECT * FROM users WHERE google_id = ? OR email = ? LIMIT 1",
+        (google_id, email),
+    ).fetchone()
+
+    if not user:
+        username = f"google_{google_id}"[:50]
+        db.execute(
+            """
+            INSERT INTO users (username, password_hash, full_name, user_type,
+                role, approved, email, google_id, created_at)
+            VALUES (?, ?, ?, 'Other', 'student', 1, ?, ?, ?)
+            """,
+            (username, generate_password_hash(secrets.token_urlsafe(32)),
+             full_name, email, google_id, datetime.utcnow().isoformat()),
+        )
+        db.commit()
+        user = db.execute("SELECT * FROM users WHERE google_id = ?", (google_id,)).fetchone()
+    elif not user["google_id"]:
+        db.execute("UPDATE users SET google_id = ? WHERE id = ?", (google_id, user["id"]))
+        db.commit()
+
+    if not user["approved"]:
+        return redirect("/?google=pending")
+
+    session.clear()
+    session["user_id"] = user["id"]
+    session["role"] = user["role"]
+    return redirect("/super-admin" if user["role"] == "super_admin" else "/dashboard")
+
+
+def send_reset_email(email, reset_url):
+    if not MAIL_SERVER or not MAIL_USERNAME or not MAIL_PASSWORD:
+        return False
+    message = EmailMessage()
+    message["Subject"] = "Reset your Empower Hope password"
+    message["From"] = MAIL_FROM
+    message["To"] = email
+    message.set_content(f"Use this link within one hour to reset your password:\n\n{reset_url}")
+    with smtplib.SMTP(MAIL_SERVER, MAIL_PORT) as server:
+        server.starttls()
+        server.login(MAIL_USERNAME, MAIL_PASSWORD)
+        server.send_message(message)
+    return True
+
+
+@app.route("/api/forgot-password", methods=["POST"])
+def api_forgot_password():
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    generic_message = "If an account matches that email, a reset link has been sent."
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+
+    user = get_db().execute("SELECT id FROM users WHERE lower(email) = ?", (email,)).fetchone()
+    response = {"message": generic_message}
+    if user:
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+        db = get_db()
+        db.execute("DELETE FROM password_reset_tokens WHERE user_id = ?", (user["id"],))
+        db.execute(
+            "INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)",
+            (user["id"], token_hash, (datetime.utcnow().timestamp() + 3600)),
+        )
+        db.commit()
+        reset_url = url_for("reset_password_page", token=raw_token, _external=True)
+        if not send_reset_email(email, reset_url) and ENVIRONMENT != "production":
+            response["reset_url"] = reset_url
+    return jsonify(response)
+
+
+@app.route("/reset-password/<token>")
+def reset_password_page(token):
+    return render_template("reset_password.html", token=token)
+
+
+@app.route("/api/reset-password", methods=["POST"])
+def api_reset_password():
+    data = request.get_json(silent=True) or {}
+    token = data.get("token") or ""
+    password = data.get("password") or ""
+    if len(password) < 8:
+        return jsonify({"error": "Password must be at least 8 characters"}), 400
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    db = get_db()
+    row = db.execute(
+        "SELECT * FROM password_reset_tokens WHERE token_hash = ? AND used_at IS NULL",
+        (token_hash,),
+    ).fetchone()
+    if not row or float(row["expires_at"]) < datetime.utcnow().timestamp():
+        return jsonify({"error": "This reset link is invalid or has expired"}), 400
+    db.execute("UPDATE users SET password_hash = ? WHERE id = ?", (generate_password_hash(password), row["user_id"]))
+    db.execute("UPDATE password_reset_tokens SET used_at = ? WHERE id = ?", (datetime.utcnow().isoformat(), row["id"]))
+    db.commit()
+    return jsonify({"message": "Password updated successfully. You can now log in."})
 
 
 # ============================================================================

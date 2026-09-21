@@ -36,3 +36,16 @@ if not SUPER_ADMIN_PASSWORD:
     if ENVIRONMENT == "production":
         raise RuntimeError("SUPER_ADMIN_PASSWORD must be set in production")
     SUPER_ADMIN_PASSWORD = "ChangeMe123!"
+
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+GOOGLE_REDIRECT_URI = os.environ.get(
+    "GOOGLE_REDIRECT_URI",
+    "http://localhost:5000/auth/google/callback",
+)
+
+MAIL_SERVER = os.environ.get("MAIL_SERVER")
+MAIL_PORT = int(os.environ.get("MAIL_PORT", "587"))
+MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
+MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+MAIL_FROM = os.environ.get("MAIL_FROM", MAIL_USERNAME or "noreply@empowerhope.org")

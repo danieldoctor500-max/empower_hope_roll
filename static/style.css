@@ -1156,3 +1156,58 @@ html[data-theme="light"] input[type="month"] {
     scroll-behavior: auto !important;
   }
 }
+
+.auth-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.auth-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+}
+
+.auth-brand strong,
+.auth-brand small { display: block; }
+.auth-brand strong { font-family: "Poppins", sans-serif; font-size: 16px; }
+.auth-brand small { color: var(--muted); font-size: 11px; }
+.logo-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--primary);
+  color: #fff;
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+}
+.logo-image {
+  width: 42px;
+  height: 42px;
+  display: block;
+  object-fit: contain;
+  border-radius: 10px;
+}
+.brand-logo-image {
+  width: 42px;
+  height: 42px;
+  display: block;
+  object-fit: contain;
+}
+.auth-nav nav { display: flex; gap: 18px; color: var(--muted); font-size: 14px; }
+.auth-nav nav a:hover, .forgot-link:hover { color: var(--primary); }
+.auth-divider { display: flex; align-items: center; gap: 10px; margin: 18px 0; color: var(--muted); font-size: 12px; }
+.auth-divider::before, .auth-divider::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
+.google-btn { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); text-align: center; }
+.google-btn:hover { border-color: var(--primary); }
+.forgot-link { display: block; margin-top: 14px; color: var(--primary); font-size: 13px; text-align: center; }
+.recovery-card { width: min(520px, 100%); margin: 24px auto 0; }
+.reset-page { padding-top: 48px; }
+.reset-page > .auth-brand { margin-bottom: 28px; }

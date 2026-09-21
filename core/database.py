@@ -87,6 +87,24 @@ def init_db():
     if not any(column[1] == "session_name" for column in columns):
         db.execute("ALTER TABLE sign_records ADD COLUMN session_name TEXT NOT NULL DEFAULT 'class_session'")
 
+    user_columns = db.execute("PRAGMA table_info(users)").fetchall()
+    if not any(column[1] == "email" for column in user_columns):
+        db.execute("ALTER TABLE users ADD COLUMN email TEXT")
+    if not any(column[1] == "google_id" for column in user_columns):
+        db.execute("ALTER TABLE users ADD COLUMN google_id TEXT")
+
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            token_hash TEXT UNIQUE NOT NULL,
+            expires_at TEXT NOT NULL,
+            used_at TEXT
+        )
+        """
+    )
+
     for class_name in DEFAULT_CLASSES:
         db.execute("INSERT OR IGNORE INTO classes (name) VALUES (?)", (class_name,))
 

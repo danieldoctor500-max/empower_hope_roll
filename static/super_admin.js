@@ -34,8 +34,14 @@ async function requireSuperAdmin() {
 
 async function loadOverview() {
     const { data } = await requestJson("/api/super-admin/overview");
-    ["students", "staff", "admins", "super-admins", "pending"].forEach((name) => {
-        const key = name.replace("-", "_");
+    const statKeys = {
+        students: "student",
+        staff: "staff",
+        admins: "admin",
+        "super-admins": "super_admin",
+        pending: "pending",
+    };
+    Object.entries(statKeys).forEach(([name, key]) => {
         const element = document.getElementById(`stat-${name}`);
         if (element) element.textContent = data[key] ?? 0;
     });

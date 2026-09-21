@@ -651,7 +651,7 @@ def api_signout():
 # ============================================================================
 
 @app.route("/api/reports/session", methods=["GET"])
-@role_required("staff", "admin")
+@role_required("staff", "admin", SUPER_ADMIN_ROLE)
 def api_session_report():
 
     date = request.args.get("date", datetime.now().strftime("%Y-%m-%d"))
@@ -713,7 +713,7 @@ def api_session_report():
 
 
 @app.route("/api/reports/session/export.csv")
-@role_required("staff", "admin")
+@role_required("staff", "admin", SUPER_ADMIN_ROLE)
 def export_session_csv():
     date = request.args.get("date", datetime.now().strftime("%Y-%m-%d"))
     class_id = request.args.get("class_id")
@@ -753,7 +753,7 @@ def export_session_csv():
 
 
 @app.route("/api/reports/session/export.xlsx")
-@role_required("staff", "admin")
+@role_required("staff", "admin", SUPER_ADMIN_ROLE)
 def export_session_excel():
     date = request.args.get("date", datetime.now().strftime("%Y-%m-%d"))
     class_id = request.args.get("class_id")
@@ -797,7 +797,7 @@ def export_session_excel():
 # ============================================================================
 
 @app.route("/api/students", methods=["GET"])
-@role_required("staff", "admin")
+@role_required("staff", "admin", SUPER_ADMIN_ROLE)
 def api_students():
 
     class_id = request.args.get("class_id")
@@ -841,7 +841,7 @@ def api_students():
 # ============================================================================
 
 @app.route("/api/attendance/mark", methods=["POST"])
-@role_required("staff", "admin")
+@role_required("staff", "admin", SUPER_ADMIN_ROLE)
 def api_mark_attendance():
 
     data = request.get_json(silent=True) or {}
@@ -969,7 +969,7 @@ def api_mark_attendance():
 # ============================================================================
 
 @app.route("/api/attendance", methods=["GET"])
-@role_required("staff", "admin")
+@role_required("staff", "admin", SUPER_ADMIN_ROLE)
 def api_attendance():
 
     class_id = request.args.get("class_id")
@@ -1026,7 +1026,7 @@ def api_attendance():
 # ============================================================================
 
 @app.route("/api/reports/daily", methods=["GET"])
-@role_required("staff", "admin")
+@role_required("staff", "admin", SUPER_ADMIN_ROLE)
 def api_daily_report():
 
     date = request.args.get(
@@ -1122,7 +1122,7 @@ def api_daily_report():
 # ============================================================================
 
 @app.route("/api/reports/monthly", methods=["GET"])
-@role_required("staff", "admin")
+@role_required("staff", "admin", SUPER_ADMIN_ROLE)
 def api_monthly_report():
 
     month = request.args.get(
@@ -1266,7 +1266,7 @@ def make_csv(filename, headers, rows):
 # ============================================================================
 
 @app.route("/api/reports/daily/export.csv")
-@role_required("staff", "admin")
+@role_required("staff", "admin", SUPER_ADMIN_ROLE)
 def export_daily_csv():
 
     date = request.args.get(
@@ -1332,7 +1332,7 @@ def export_daily_csv():
 # ============================================================================
 
 @app.route("/api/reports/monthly/export.csv")
-@role_required("staff", "admin")
+@role_required("staff", "admin", SUPER_ADMIN_ROLE)
 def export_monthly_csv():
 
     month = request.args.get(
@@ -1508,7 +1508,7 @@ def make_excel(filename, headers, rows):
 # ============================================================================
 
 @app.route("/api/reports/daily/export.xlsx")
-@role_required("staff", "admin")
+@role_required("staff", "admin", SUPER_ADMIN_ROLE)
 def export_daily_excel():
 
     date = request.args.get(
@@ -1574,7 +1574,7 @@ def export_daily_excel():
 # ============================================================================
 
 @app.route("/api/reports/monthly/export.xlsx")
-@role_required("staff", "admin")
+@role_required("staff", "admin", SUPER_ADMIN_ROLE)
 def export_monthly_excel():
 
     month = request.args.get(

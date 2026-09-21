@@ -91,6 +91,30 @@ function updateSignStatus(data) {
 }
 
 
+function updateSignActionStatus(action, data) {
+    const currentStatus = {
+        date: data.date,
+        timezone: data.timezone,
+        sign_in: action === "in" ? data.time : undefined,
+        sign_out: action === "out" ? data.time : undefined,
+    };
+
+    const signIn = document.getElementById("sign-status-in");
+    const signOut = document.getElementById("sign-status-out");
+    const date = document.getElementById("sign-status-date");
+
+    if (date) {
+        date.textContent = `${currentStatus.date} (${currentStatus.timezone || "local time"})`;
+    }
+    if (action === "in" && signIn) {
+        signIn.textContent = `Sign in: ${currentStatus.sign_in}`;
+    }
+    if (action === "out" && signOut) {
+        signOut.textContent = `Sign out: ${currentStatus.sign_out}`;
+    }
+}
+
+
 async function loadSignStatus() {
     const sessionSelect = document.getElementById("sign-session-select");
     const sessionName = sessionSelect ? sessionSelect.value : "class_session";
@@ -277,7 +301,10 @@ if (signinButton) {
             result.ok
         );
 
-        if (result.ok) loadSignStatus();
+        if (result.ok) {
+            updateSignActionStatus("in", result.data);
+            await loadSignStatus();
+        }
     });
 }
 
@@ -310,7 +337,10 @@ if (signoutButton) {
             result.ok
         );
 
-        if (result.ok) loadSignStatus();
+        if (result.ok) {
+            updateSignActionStatus("out", result.data);
+            await loadSignStatus();
+        }
     });
 }
 
@@ -1383,8 +1413,8 @@ if (logoutButton) {
 // ============================================================
 
 async function initializeDashboard() {
-    await loadClasses();
     await loadMe();
+    await loadClasses();
     await loadSignStatus();
     updateExportLinks();
 }

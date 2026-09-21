@@ -127,7 +127,7 @@ def api_register():
 
     student_number = (
         data.get("student_number") or ""
-    ).strip() or None
+    ).strip()
 
     # ------------------------------------------------------------------------
     # Validation
@@ -172,6 +172,12 @@ def api_register():
             "error": "Students must select a class"
         }), 400
 
+    if user_type == "Student" and not student_number:
+
+        return jsonify({
+            "error": "Students must provide an admission number"
+        }), 400
+
     if class_id and not class_exists(class_id):
 
         return jsonify({
@@ -195,6 +201,19 @@ def api_register():
             "error": "That username is already taken"
         }), 409
 
+    if student_number:
+        existing_number = db.execute(
+            "SELECT id FROM users WHERE student_number = ?",
+            (student_number,)
+        ).fetchone()
+
+        if existing_number:
+            return jsonify({
+                "error": "That admission number is already registered"
+            }), 409
+
+    approved = 1 if user_type == "Student" else 0
+
     db.execute(
         """
         INSERT INTO users (
@@ -208,7 +227,7 @@ def api_register():
             approved,
             created_at
         )
-        VALUES (?, ?, ?, ?, 'student', ?, ?, 0, ?)
+        VALUES (?, ?, ?, ?, 'student', ?, ?, ?, ?)
         """,
         (
             username,
@@ -216,7 +235,8 @@ def api_register():
             full_name,
             user_type,
             class_id,
-            student_number,
+            student_number or None,
+            approved,
             datetime.utcnow().isoformat(),
         )
     )
@@ -225,10 +245,11 @@ def api_register():
 
     return jsonify({
         "message": (
-            "Registration submitted successfully. "
-            "An administrator must approve your account "
-            "before you can log in."
-        )
+            "Registration successful. You can now log in."
+            if approved
+            else "Registration submitted successfully. An administrator must approve your account before you can log in."
+        ),
+        "approved": bool(approved),
     }), 201
 
 

@@ -200,15 +200,28 @@ function updateRegistrationFields() {
 
     if (!selectedType) return;
 
+    const studentNumberLabel =
+        document.getElementById("student-number-label");
+
+    const studentNumberInput =
+        document.querySelector(
+            "#register-form input[name='student_number']"
+        );
+
     if (selectedType.value === "Student") {
 
         classLabel.style.display = "block";
         classSelect.required = true;
+        studentNumberLabel.style.display = "block";
+        studentNumberInput.required = true;
 
     } else {
 
         classLabel.style.display = "block";
         classSelect.required = false;
+        studentNumberLabel.style.display = "none";
+        studentNumberInput.required = false;
+        studentNumberInput.value = "";
     }
 }
 
@@ -354,6 +367,10 @@ if (registerForm) {
                 registerForm.reset();
 
                 updateRegistrationFields();
+
+                document.querySelector(
+                    ".tab-btn[data-tab='login']"
+                )?.click();
 
                 return;
             }

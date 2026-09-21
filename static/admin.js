@@ -97,6 +97,17 @@ function setButtonLoading(
 }
 
 
+document.querySelectorAll("[data-jump-to]").forEach((button) => {
+    button.addEventListener("click", () => {
+        const target = document.getElementById(button.dataset.jumpTo);
+        if (!target) return;
+
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        window.setTimeout(() => target.focus({ preventScroll: true }), 350);
+    });
+});
+
+
 // ============================================================================
 // REQUIRE ADMIN
 // ============================================================================

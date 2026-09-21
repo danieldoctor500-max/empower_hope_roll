@@ -89,25 +89,25 @@ Admin | Empower Hope
 
     <div class="admin-stats" aria-label="Admin account summary">
 
-      <div class="admin-stat">
+      <button class="admin-stat" type="button" data-jump-to="pending-approvals">
         <span class="admin-stat-label">Pending</span>
         <strong id="stat-pending">0</strong>
-      </div>
+      </button>
 
-      <div class="admin-stat">
+      <button class="admin-stat" type="button" data-jump-to="all-users">
         <span class="admin-stat-label">Total users</span>
         <strong id="stat-total-users">0</strong>
-      </div>
+      </button>
 
-      <div class="admin-stat">
+      <button class="admin-stat" type="button" data-jump-to="all-users">
         <span class="admin-stat-label">Approved</span>
         <strong id="stat-approved-users">0</strong>
-      </div>
+      </button>
 
-      <div class="admin-stat">
+      <button class="admin-stat" type="button" data-jump-to="create-staff-form-card">
         <span class="admin-stat-label">Staff &amp; admins</span>
         <strong id="stat-staff-users">0</strong>
-      </div>
+      </button>
 
     </div>
 
@@ -118,7 +118,7 @@ Admin | Empower Hope
   <!-- PENDING APPROVALS -->
   <!-- ================================================================ -->
 
-  <section class="card accent-top">
+  <section class="card accent-top" id="pending-approvals" tabindex="-1">
 
     <h2>
       Pending Approvals
@@ -258,7 +258,7 @@ Admin | Empower Hope
   <!-- ALL USERS -->
   <!-- ================================================================ -->
 
-  <section class="card wide">
+  <section class="card wide" id="all-users" tabindex="-1">
 
     <h2>
       All Users

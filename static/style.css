@@ -1206,14 +1206,19 @@ html[data-theme="light"] input[type="month"] {
   width: 42px;
   height: 42px;
   display: block;
-  object-fit: contain;
-  border-radius: 10px;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 .brand-logo-image {
   width: 42px;
   height: 42px;
   display: block;
-  object-fit: contain;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 .auth-nav nav { display: flex; gap: 18px; color: var(--muted); font-size: 14px; }
 .auth-nav nav a:hover, .forgot-link:hover { color: var(--primary); }

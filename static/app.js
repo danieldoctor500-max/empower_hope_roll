@@ -9,9 +9,23 @@ if (initialAuthCard) {
 
 
 function showMessage(text, isSuccess = false) {
+    if (!messageEl) return;
+
     messageEl.textContent = text || "";
     messageEl.className =
         "message" + (isSuccess ? " success" : "");
+}
+
+
+const googleStatus = {
+    unavailable: "Google sign-in is not configured on this server.",
+    invalid: "Google sign-in did not return a valid account.",
+    pending: "Your account is waiting for administrator approval.",
+};
+
+const googleResult = new URLSearchParams(window.location.search).get("google");
+if (googleResult && googleStatus[googleResult]) {
+    showMessage(googleStatus[googleResult]);
 }
 
 
@@ -249,6 +263,40 @@ updateRegistrationFields();
 const loginForm =
     document.getElementById("login-form");
 
+const loginIdentifierLabel =
+    document.getElementById("login-identifier-label");
+
+const loginIdentifierInput =
+    document.getElementById("login-identifier");
+
+const loginTypeInputs =
+    document.querySelectorAll("#login-form input[name='user_type']");
+
+function updateLoginIdentifier() {
+    const selectedType = document.querySelector(
+        "#login-form input[name='user_type']:checked"
+    );
+    const isStudent = selectedType?.value === "Student";
+
+    if (loginIdentifierLabel) {
+        loginIdentifierLabel.firstChild.textContent = isStudent
+            ? "Student ID / Admission number"
+            : "Username";
+    }
+
+    if (loginIdentifierInput) {
+        loginIdentifierInput.autocomplete = isStudent
+            ? "off"
+            : "username";
+    }
+}
+
+loginTypeInputs.forEach((input) => {
+    input.addEventListener("change", updateLoginIdentifier);
+});
+
+updateLoginIdentifier();
+
 
 if (loginForm) {
 
@@ -297,7 +345,13 @@ if (loginForm) {
                 window.location.href =
                     data.user && data.user.role === "super_admin"
                         ? "/super-admin"
-                        : "/dashboard";
+                        : data.user && data.user.role === "admin"
+                            ? "/admin"
+                            : data.user && data.user.role === "staff"
+                                ? "/staff"
+                                : data.user && data.user.role === "facilitator"
+                                    ? "/facilitator"
+                                    : "/dashboard";
 
                 return;
             }
@@ -389,6 +443,17 @@ if (registerForm) {
 }
 
 const forgotPasswordForm = document.getElementById("forgot-password-form");
+const forgotPasswordLink = document.querySelector(".forgot-link");
+if (forgotPasswordLink) {
+    forgotPasswordLink.addEventListener("click", (event) => {
+        event.preventDefault();
+        const recoveryCard = document.getElementById("forgot-password");
+        const emailInput = forgotPasswordForm?.querySelector("input[name='email']");
+        recoveryCard?.scrollIntoView({ behavior: "smooth", block: "start" });
+        emailInput?.focus({ preventScroll: true });
+    });
+}
+
 if (forgotPasswordForm) {
     forgotPasswordForm.addEventListener("submit", async (event) => {
         event.preventDefault();

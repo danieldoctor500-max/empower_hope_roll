@@ -116,6 +116,16 @@ def dashboard_page():
     return render_template("dashboard.html")
 
 
+@app.route("/staff")
+def staff_page():
+    return render_template("dashboard.html", dashboard_role="staff")
+
+
+@app.route("/facilitator")
+def facilitator_page():
+    return render_template("dashboard.html", dashboard_role="facilitator")
+
+
 @app.route("/admin")
 def admin_page():
     return render_template("admin_dashboard.html")
@@ -294,28 +304,36 @@ def api_login():
 
     data = request.get_json(silent=True) or {}
 
-    username = (
-        data.get("username") or ""
+    identifier = (
+        data.get("identifier") or data.get("username") or ""
     ).strip()
 
     password = data.get("password") or ""
+    user_type = data.get("user_type") or "Student"
 
-    if not username or not password:
+    if not identifier or not password:
 
         return jsonify({
-            "error": "Username and password are required"
+            "error": "Student ID or username and password are required"
         }), 400
 
     db = get_db()
 
-    user = db.execute(
-        """
-        SELECT *
-        FROM users
-        WHERE username = ?
-        """,
-        (username,)
-    ).fetchone()
+    if user_type == "Student":
+        user = db.execute(
+            """
+            SELECT *
+            FROM users
+            WHERE user_type = ?
+              AND (student_number = ? OR CAST(id AS TEXT) = ?)
+            """,
+            (user_type, identifier, identifier),
+        ).fetchone()
+    else:
+        user = db.execute(
+            "SELECT * FROM users WHERE username = ? AND user_type = ?",
+            (identifier, user_type),
+        ).fetchone()
 
     if not user:
 
@@ -1013,7 +1031,7 @@ def export_session_excel():
 # ============================================================================
 
 @app.route("/api/students", methods=["GET"])
-@role_required("staff", "admin", SUPER_ADMIN_ROLE)
+@role_required("staff", "facilitator", "admin", SUPER_ADMIN_ROLE)
 def api_students():
 
     class_id = request.args.get("class_id")
@@ -1057,7 +1075,7 @@ def api_students():
 # ============================================================================
 
 @app.route("/api/attendance/mark", methods=["POST"])
-@role_required("staff", "admin", SUPER_ADMIN_ROLE)
+@role_required("staff", "facilitator")
 def api_mark_attendance():
 
     data = request.get_json(silent=True) or {}
@@ -1133,6 +1151,15 @@ def api_mark_attendance():
 
     actor = current_user()
 
+    submission = db.execute(
+        "SELECT status FROM attendance_submissions WHERE class_id = ? AND date = ?",
+        (class_id, date),
+    ).fetchone()
+    if submission and submission["status"] in ("pending", "approved"):
+        return jsonify({
+            "error": "This attendance has already been submitted for admin review"
+        }), 409
+
     now = datetime.utcnow().isoformat()
 
     db.execute(
@@ -1178,6 +1205,112 @@ def api_mark_attendance():
     return jsonify({
         "message": "Attendance recorded successfully"
     })
+
+
+@app.route("/api/attendance/submission", methods=["GET"])
+@role_required("staff", "facilitator", "admin", SUPER_ADMIN_ROLE)
+def api_attendance_submission():
+    class_id = request.args.get("class_id")
+    date = request.args.get("date", datetime.now().strftime("%Y-%m-%d"))
+    if not class_id or not valid_date(date):
+        return jsonify({"error": "A valid class and date are required"}), 400
+
+    row = get_db().execute(
+        "SELECT * FROM attendance_submissions WHERE class_id = ? AND date = ?",
+        (class_id, date),
+    ).fetchone()
+    return jsonify(dict(row) if row else {
+        "class_id": class_id,
+        "date": date,
+        "status": "draft",
+    })
+
+
+@app.route("/api/attendance/submit", methods=["POST"])
+@role_required("staff", "facilitator")
+def api_submit_attendance():
+    data = request.get_json(silent=True) or {}
+    class_id = data.get("class_id")
+    date = data.get("date") or datetime.now().strftime("%Y-%m-%d")
+    if not class_id or not valid_date(date) or not class_exists(class_id):
+        return jsonify({"error": "A valid class and date are required"}), 400
+
+    db = get_db()
+    existing = db.execute(
+        "SELECT * FROM attendance_submissions WHERE class_id = ? AND date = ?",
+        (class_id, date),
+    ).fetchone()
+    if existing and existing["status"] in ("pending", "approved"):
+        return jsonify({"error": "This attendance has already been submitted"}), 409
+
+    actor = current_user()
+    now = datetime.utcnow().isoformat()
+    db.execute(
+        """
+        INSERT INTO attendance_submissions
+            (class_id, date, submitted_by, submitted_at, status, review_note)
+        VALUES (?, ?, ?, ?, 'pending', NULL)
+        ON CONFLICT(class_id, date) DO UPDATE SET
+            submitted_by = excluded.submitted_by,
+            submitted_at = excluded.submitted_at,
+            status = 'pending',
+            reviewed_by = NULL,
+            reviewed_at = NULL,
+            review_note = NULL
+        """,
+        (class_id, date, actor["id"], now),
+    )
+    db.commit()
+    log_action(actor["id"], "submit_attendance", target=f"class:{class_id} date:{date}")
+    return jsonify({"message": "Attendance submitted to admin for review", "status": "pending"})
+
+
+@app.route("/api/admin/attendance-submissions", methods=["GET"])
+@role_required("admin", SUPER_ADMIN_ROLE)
+def api_admin_attendance_submissions():
+    rows = get_db().execute(
+        """
+        SELECT s.*, c.name AS class_name, u.full_name AS submitted_by_name
+        FROM attendance_submissions s
+        JOIN classes c ON c.id = s.class_id
+        LEFT JOIN users u ON u.id = s.submitted_by
+        WHERE s.status = 'pending'
+        ORDER BY s.submitted_at DESC
+        """
+    ).fetchall()
+    return jsonify([dict(row) for row in rows])
+
+
+@app.route("/api/admin/attendance-submissions/<int:submission_id>", methods=["POST"])
+@role_required("admin", SUPER_ADMIN_ROLE)
+def api_review_attendance_submission(submission_id):
+    data = request.get_json(silent=True) or {}
+    decision = data.get("decision")
+    note = (data.get("note") or "").strip()[:500]
+    if decision not in ("approved", "rejected"):
+        return jsonify({"error": "Decision must be approved or rejected"}), 400
+
+    db = get_db()
+    submission = db.execute(
+        "SELECT * FROM attendance_submissions WHERE id = ? AND status = 'pending'",
+        (submission_id,),
+    ).fetchone()
+    if not submission:
+        return jsonify({"error": "Pending attendance submission not found"}), 404
+
+    actor = current_user()
+    now = datetime.utcnow().isoformat()
+    db.execute(
+        """
+        UPDATE attendance_submissions
+        SET status = ?, reviewed_by = ?, reviewed_at = ?, review_note = ?
+        WHERE id = ?
+        """,
+        (decision, actor["id"], now, note or None, submission_id),
+    )
+    db.commit()
+    log_action(actor["id"], f"{decision}_attendance", target=f"submission:{submission_id}")
+    return jsonify({"message": f"Attendance submission {decision}"})
 
 
 # ============================================================================
@@ -2087,6 +2220,11 @@ def api_admin_create_staff():
         data.get("full_name") or ""
     ).strip()
 
+    role = data.get("role") or "staff"
+
+    if role not in ("staff", "facilitator"):
+        return jsonify({"error": "Role must be staff or facilitator"}), 400
+
     if not username or not password or not full_name:
 
         return jsonify({
@@ -2136,12 +2274,13 @@ def api_admin_create_staff():
             approved,
             created_at
         )
-        VALUES (?, ?, ?, 'Staff', 'staff', 1, ?)
+        VALUES (?, ?, ?, 'Staff', ?, 1, ?)
         """,
         (
             username,
             generate_password_hash(password),
             full_name,
+            role,
             datetime.utcnow().isoformat(),
         )
     )

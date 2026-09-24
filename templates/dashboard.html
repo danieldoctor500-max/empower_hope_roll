@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-Dashboard | Empower Hope
+Staff and Facilitator Dashboard | Empower Hope
 {% endblock %}
 
 
@@ -229,7 +229,7 @@ Dashboard | Empower Hope
   <!-- ================================================================ -->
 
   <section
-    class="card wide staff-only"
+    class="card wide staff-only department-only"
     style="display:none;"
   >
 
@@ -289,6 +289,14 @@ Dashboard | Empower Hope
         type="button"
       >
         Mark filtered students
+      </button>
+
+      <button
+        id="submit-attendance-btn"
+        class="btn"
+        type="button"
+      >
+        Submit attendance to admin
       </button>
 
     </div>

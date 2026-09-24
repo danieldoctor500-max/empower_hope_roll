@@ -153,6 +153,52 @@ async function requireAdmin() {
 }
 
 
+async function loadAttendanceSubmissions() {
+    const table = document.querySelector("#attendance-submissions-table tbody");
+    if (!table) return;
+
+    const { response, data } = await requestJson("/api/admin/attendance-submissions");
+    if (!response || !response.ok) {
+        setMessage(document.getElementById("attendance-submissions-message"), data.error || "Unable to load submissions.");
+        return;
+    }
+
+    table.innerHTML = data.length ? data.map((submission) => `
+        <tr>
+            <td>${escapeHtml(submission.class_name)}</td>
+            <td>${escapeHtml(submission.date)}</td>
+            <td>${escapeHtml(submission.submitted_by_name || "-" )}</td>
+            <td>
+                <button class="btn small" data-attendance-review="approved" data-id="${submission.id}">Approve</button>
+                <button class="btn small" data-attendance-review="rejected" data-id="${submission.id}">Reject</button>
+            </td>
+        </tr>
+    `).join("") : `<tr><td colspan="4">No pending attendance submissions.</td></tr>`;
+
+    table.querySelectorAll("[data-attendance-review]").forEach((button) => {
+        button.addEventListener("click", async () => {
+            const decision = button.dataset.attendanceReview;
+            const note = decision === "rejected" ? window.prompt("Reason for rejection (optional):") : "";
+            if (decision === "rejected" && note === null) return;
+
+            button.disabled = true;
+            const result = await requestJson(`/api/admin/attendance-submissions/${button.dataset.id}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ decision, note: note || "" }),
+            });
+            setMessage(
+                document.getElementById("attendance-submissions-message"),
+                result.data.message || result.data.error,
+                result.response && result.response.ok
+            );
+            if (result.response && result.response.ok) loadAttendanceSubmissions();
+            button.disabled = false;
+        });
+    });
+}
+
+
 // ============================================================================
 // PENDING USERS
 // ============================================================================
@@ -1078,6 +1124,7 @@ async function refreshAdminData() {
         loadPending(),
         loadUsers(),
         loadAuditLog(),
+        loadAttendanceSubmissions(),
     ]);
 
     if (refreshAdminButton) {
@@ -1097,6 +1144,11 @@ if (refreshAdminButton) {
     );
 }
 
+document.getElementById("refresh-attendance-submissions")?.addEventListener(
+    "click",
+    loadAttendanceSubmissions
+);
+
 
 // ============================================================================
 // INITIALIZATION
@@ -1115,6 +1167,11 @@ async function initializeAdmin() {
 
     window.setInterval(
         loadPending,
+        10000
+    );
+
+    window.setInterval(
+        loadAttendanceSubmissions,
         10000
     );
 }

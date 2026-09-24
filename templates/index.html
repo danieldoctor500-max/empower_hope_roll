@@ -91,12 +91,13 @@
 
           <form id="login-form">
 
-        <label>
-          Username
+        <label for="login-identifier" id="login-identifier-label">
+          Student ID / Admission number
 
           <input
             type="text"
-            name="username"
+            id="login-identifier"
+            name="identifier"
             required
             minlength="3"
             maxlength="50"
@@ -117,7 +118,7 @@
 
               <label class="radio-option">
                 <input type="radio" name="user_type" value="Staff">
-                <span>Staff</span>
+                <span>Staff / Facilitator</span>
               </label>
 
               <label class="radio-option">

@@ -233,6 +233,14 @@ Admin | Empower Hope
 
       </label>
 
+      <label>
+        Account role
+        <select name="role" required>
+          <option value="staff">Department staff</option>
+          <option value="facilitator">Facilitator</option>
+        </select>
+      </label>
+
 
       <button
         type="submit"
@@ -292,6 +300,19 @@ Admin | Empower Hope
 
     </div>
 
+  </section>
+
+  <section class="card wide" id="attendance-submissions">
+    <h2>Attendance submissions</h2>
+    <p class="hint">Review attendance submitted by teachers and facilitators.</p>
+    <button id="refresh-attendance-submissions" class="btn small" type="button">Refresh</button>
+    <div class="table-wrapper">
+      <table class="data-table" id="attendance-submissions-table">
+        <thead><tr><th>Class</th><th>Date</th><th>Submitted by</th><th>Actions</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p id="attendance-submissions-message" class="message" role="status"></p>
   </section>
 
 

@@ -154,6 +154,15 @@ async function loadMe() {
 
     me = result.data.user;
 
+    const dashboardPath = me.role === "facilitator"
+        ? "/facilitator"
+        : me.role === "staff"
+            ? "/staff"
+            : "/dashboard";
+    document.querySelectorAll("a[href='/dashboard']").forEach((link) => {
+        link.href = dashboardPath;
+    });
+
     const welcome = document.getElementById("welcome");
 
     if (welcome) {
@@ -194,6 +203,22 @@ async function loadMe() {
                 element.style.display = "block";
             });
 
+        await loadStudents();
+    }
+
+    if (me.role === "facilitator") {
+        document.querySelectorAll(".department-only").forEach((element) => {
+            element.style.display = "none";
+        });
+        document.title = "Facilitator Dashboard | Empower Hope";
+    } else if (me.role === "staff") {
+        document.title = "Department Staff Dashboard | Empower Hope";
+    }
+
+    if (me.role === "facilitator") {
+        document.querySelectorAll(".staff-only").forEach((element) => {
+            element.style.display = "block";
+        });
         await loadStudents();
     }
 }
@@ -440,6 +465,21 @@ async function loadStudents() {
             ? attendanceResult.data
             : [];
 
+    const submissionResult = await apiRequest(
+        `/api/attendance/submission?class_id=${encodeURIComponent(classId || "")}&date=${encodeURIComponent(date)}`
+    );
+    const submissionStatus = submissionResult.ok
+        ? submissionResult.data.status
+        : "draft";
+    if (submitAttendanceButton) {
+        submitAttendanceButton.disabled = ["pending", "approved"].includes(submissionStatus);
+        submitAttendanceButton.textContent = submissionStatus === "pending"
+            ? "Submitted for admin review"
+            : submissionStatus === "approved"
+                ? "Attendance approved"
+                : "Submit attendance to admin";
+    }
+
     const statusByStudent = {};
 
     attendance.forEach((record) => {
@@ -605,6 +645,34 @@ async function loadStudents() {
 
 const bulkAttendanceButton =
     document.getElementById("bulk-attendance-btn");
+
+const submitAttendanceButton =
+    document.getElementById("submit-attendance-btn");
+
+if (submitAttendanceButton) {
+    submitAttendanceButton.addEventListener("click", async () => {
+        const classId = classFilter ? classFilter.value : "";
+        const date = dateInput ? dateInput.value : todayString();
+
+        if (!classId) {
+            showMessage("attendance-message", "Choose a class before submitting attendance.");
+            return;
+        }
+
+        submitAttendanceButton.disabled = true;
+        const result = await apiRequest("/api/attendance/submit", {
+            method: "POST",
+            body: JSON.stringify({ class_id: classId, date }),
+        });
+        submitAttendanceButton.disabled = false;
+        showMessage(
+            "attendance-message",
+            result.data.message || result.data.error,
+            result.ok
+        );
+        if (result.ok) await loadStudents();
+    });
+}
 
 if (bulkAttendanceButton) {
     bulkAttendanceButton.addEventListener("click", async () => {

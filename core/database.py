@@ -69,6 +69,18 @@ def init_db():
             marked_at TEXT NOT NULL,
             UNIQUE(student_id, class_id, date)
         );
+        CREATE TABLE IF NOT EXISTS attendance_submissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+            date TEXT NOT NULL,
+            submitted_by INTEGER REFERENCES users(id),
+            submitted_at TEXT,
+            status TEXT NOT NULL DEFAULT 'draft',
+            reviewed_by INTEGER REFERENCES users(id),
+            reviewed_at TEXT,
+            review_note TEXT,
+            UNIQUE(class_id, date)
+        );
         CREATE TABLE IF NOT EXISTS audit_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             actor_id INTEGER REFERENCES users(id),

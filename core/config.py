@@ -14,7 +14,7 @@ DEFAULT_CLASSES = [
 ]
 
 USER_TYPES = ["Student", "Staff", "Other"]
-ROLES = ["student", "staff", "admin"]
+ROLES = ["student", "facilitator", "staff", "admin"]
 SUPER_ADMIN_ROLE = "super_admin"
 ATTENDANCE_STATUSES = ["Present", "Absent", "Late", "Excused"]
 
